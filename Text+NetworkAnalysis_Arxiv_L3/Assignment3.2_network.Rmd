@@ -1,0 +1,213 @@
+---
+title: "Assignment 3"
+author: "Sevastian Sanchez"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Text and Network Visualization with ArXiv Papers
+
+## Data
+
+ArXiv is a free distribution service and open-access archive for scholarly articles, primarily in physics, mathematics, computer science, and related disciplines. For this assignment, we'll be working with a dataset of recent papers from the "Physics and Society" (physics.soc-ph) category, which covers research on social phenomena, collective behavior, opinion dynamics, social networks, and other topics at the intersection of physics and social science.
+
+The dataset contains information about approximately 10,000 recent papers published between 2018 and the present. This subset has been extracted from the complete ArXiv dataset.
+
+### `arxiv_subset.csv`
+
+| variable    | class     | description                                                 |
+| :---------- | :-------- | :---------------------------------------------------------- |
+| id          | character | ArXiv paper ID                                              |
+| title       | character | Paper title                                                 |
+| authors     | character | Author names (comma-separated list)                         |
+| categories  | character | ArXiv categories (papers can belong to multiple categories) |
+| update_date | character | Last update date                                            |
+| abstract    | character | Full text abstract of the paper                             |
+
+Additional information is available in the full JSON file (`arxiv_subset.json`) including version history, DOI, and other metadata. The JSON file also contains the parsed author names, making it easier to work with author data.
+
+## Tasks
+
+In this assignment, you will create a series of visualizations to explore the ArXiv papers dataset through text and network analysis techniques. Your notebook should be well-documented with explanations of your approach and interpretation of results. **Choose two of the three main tasks below to complete** (Text Analysis, Author Network, or Topic Analysis).
+
+## Author Network 
+
+a) **Network Construction**
+
+- **Filter the dataset** to include only papers that are categorized as both "physics.soc-ph" (Physics and Society) AND "cs.SI" (Social and Information Networks)
+- Extract author information from these papers and create a network where authors who co-authored at least one paper are connected
+  - _Hint: For each paper, create pairs of co-authors. These pairs will form the edges of your network._
+- **Further limit your analysis to authors who have published at least 4 papers** in this subset to keep the visualization manageable
+  - _Hint: Count papers per author, then filter to keep only prolific authors._
+
+```{r}
+library(tidyverse) 
+library(igraph)
+library(visNetwork)
+
+setwd("~/Desktop/Spring 2025/Data Viz/R Directory - Data_Viz/Sanchez_Sevastian_DataViz/11_arxiv_GRADED")
+arxiv <- read_csv("data/arxiv_subset.csv")
+```
+
+
+### Wrangling & constructing network 
+```{r}
+#wrangling 
+filtered <- arxiv %>%
+  filter(str_detect(categories, "physics.soc-ph") & str_detect(categories, "cs.SI")) %>%
+  separate_rows(authors, sep = ",") %>%
+  separate_rows(authors, sep = " and ") %>%
+  mutate(authors = str_trim(authors)) %>%
+  filter(authors != "")
+
+# Recognizing accent marks
+filtered <- filtered %>%
+  mutate(
+    # Acute accents (á, é, etc.)
+    authors = str_replace_all(authors, fixed("\\'a"), "á"),
+    authors = str_replace_all(authors, fixed("\\'e"), "é"),
+    authors = str_replace_all(authors, fixed("\\'i"), "í"),
+    authors = str_replace_all(authors, fixed("\\'o"), "ó"),
+    authors = str_replace_all(authors, fixed("\\'u"), "ú"),
+    
+    # Grave accents (à, è, etc.)
+    authors = str_replace_all(authors, fixed("\\`a"), "à"),
+    authors = str_replace_all(authors, fixed("\\`e"), "è"),
+    authors = str_replace_all(authors, fixed("\\`i"), "ì"),
+    authors = str_replace_all(authors, fixed("\\`o"), "ò"),
+    authors = str_replace_all(authors, fixed("\\`u"), "ù"),
+    
+    # Umlaut/diaeresis (ä, ö, etc.)
+    authors = str_replace_all(authors, fixed('\\"a'), "ä"),
+    authors = str_replace_all(authors, fixed('\\"o'), "ö"),
+    authors = str_replace_all(authors, fixed('\\"u'), "ü"),
+    
+    # Circumflex (â, ê, etc.)
+    authors = str_replace_all(authors, fixed("\\^a"), "â"),
+    authors = str_replace_all(authors, fixed("\\^e"), "ê"),
+    authors = str_replace_all(authors, fixed("\\^i"), "î"),
+    authors = str_replace_all(authors, fixed("\\^o"), "ô"),
+    authors = str_replace_all(authors, fixed("\\^u"), "û"),
+    
+    # Tilde (ñ, Ñ)
+    authors = str_replace_all(authors, fixed("\\~n"), "ñ"),
+    authors = str_replace_all(authors, fixed("\\~N"), "Ñ"),
+    
+    # Cedilla (ç, Ç)
+    authors = str_replace_all(authors, fixed("\\c{c}"), "ç"),
+    authors = str_replace_all(authors, fixed("\\c{C}"), "Ç"),
+    
+    # Remove any remaining backslashes
+    authors = str_replace_all(authors, fixed("\\"), "")
+  )
+
+#paper_counts DF 
+paper_counts_df <- filtered %>%
+  count(authors, name = "paper_count")
+
+#converting var to numeric in paper_counts DF 
+paper_counts_df$paper_count <- as.numeric(paper_counts_df$paper_count)
+
+#merging paper_counts to filtered
+filtered <- filtered %>% 
+  left_join(paper_counts_df, by = 'authors')
+
+# further filtering to authors w/ more than 4 papers
+prolific_authors <- filtered %>%
+  filter(paper_count >= 4)
+
+# creating vector 
+prolific_authors_vect <- prolific_authors %>%
+  pull(authors)
+
+#edges 
+edges <- filtered %>%
+  group_by(id) %>%
+  mutate(prolific_in_paper = authors %in% prolific_authors_vect) %>%
+  filter(prolific_in_paper) %>%
+  filter(n() >= 2) %>%
+  summarise(authors = list(unique(authors)), .groups = "drop") %>%
+  mutate(pairs = purrr::map(authors, ~ combn(.x, 2, simplify = FALSE))) %>%
+  unnest(pairs) %>%
+  mutate(
+    from = map_chr(pairs, ~ .x[1]),
+    to = map_chr(pairs, ~ .x[2])
+  ) %>%
+  select(from, to)
+
+#adding weights based on paper number 
+edges_weighted <- edges %>%
+  count(from, to, name = "weight")
+
+#output 
+g <- graph_from_data_frame(edges_weighted, directed = FALSE)
+
+#checking NAs for papers 
+V(g)$papers <- paper_counts_df$paper_count[match(V(g)$name, paper_counts_df$authors)]
+if (any(is.na(V(g)$papers))) {
+  V(g)$papers[is.na(V(g)$papers)] <- 0
+}
+
+```
+
+b) **Network Visualization**
+
+- Create a visualization of the author collaboration network using an appropriate layout algorithm
+- Size nodes based on the number of papers published by each author
+  - _Hint: Map the paper count to node size in your visualization._
+- Color nodes based on a relevant metric (e.g., betweenness centrality or degree)
+  - _Hint: Use centrality metrics available in network analysis packages like `igraph`._
+- Label the 10-15 most prolific authors
+
+# preparing visualization
+```{r}
+# Centrality Calculation 
+V(g)$betweenness <- betweenness(g, normalized = TRUE)
+
+# Top Authors for Labeling 
+top_authors <- V(g)$name[order(V(g)$papers, decreasing = TRUE)][1:15]
+
+# Nodes and Edges used for visNetwork package
+nodes_df <- data.frame(
+  id = V(g)$name,
+  label = ifelse(V(g)$name %in% top_authors, V(g)$name, ""),
+  value = V(g)$papers,
+  color = colorRampPalette(c("#54C568FF", "#36A9ABFF", "#3487A6FF", "#3D5296FF"))(100)[
+    cut(V(g)$betweenness, breaks = 400, labels = FALSE)
+  ],
+  title = paste0(
+    "<b>", V(g)$name, "</b><br>",
+    "Papers: ", V(g)$papers, "<br>",
+    "Betweenness: ", round(V(g)$betweenness, 3)
+  )
+)
+
+#df for edges
+edges_df <- edges_weighted %>%
+  select(from, to)
+```
+
+#Visualizing network
+```{r}
+# Interactive Network Visualization 
+author_net <- visNetwork(nodes_df, edges_df, height = "600px", width = "100%") %>%
+  visIgraphLayout(layout = "layout_nicely") %>%
+  visNodes(size = nodes_df$value, font = list(size = 45, color = "#444444", face = "georgia", bold = TRUE)) %>%
+  visEdges(smooth = FALSE) %>%
+  visOptions(highlightNearest = TRUE, nodesIdSelection = TRUE) %>% 
+  visInteraction(keyboard = TRUE, dragNodes = TRUE, dragView = TRUE, zoomView = TRUE) %>%
+  visLayout(randomSeed = 42) %>% 
+  visEvents(
+    type = "once",
+    startStabilizing = "function() { this.moveTo({scale:0.15}); }")
+
+author_net
+
+```
+In the network displayed, nodes represent authors and edges (connections) indicate co-authorship relationships. The size of nodes represent the number of papers published by each author, while node color reflects centrality measure of betweenness, with with darker blue highlighting more central or influential authors. The network exhibits a densely connected core with several prominent and well-connected authors labeled (top 25). They are surrounded by peripheral nodes and smaller, loosely connected clusters as we go further from the center. 
+
+

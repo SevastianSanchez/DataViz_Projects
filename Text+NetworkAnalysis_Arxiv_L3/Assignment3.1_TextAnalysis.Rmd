@@ -1,0 +1,114 @@
+---
+title: "Assignment 3.1 Text Analysis"
+author: "Sevastian Sanchez"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## packages and data 
+```{r}
+library(tidyverse)
+library(tidytext)
+library(lubridate)
+library(wordcloud)
+library(textstem)
+#library(SnowballC)
+
+setwd("~/Desktop/Spring 2025/Data Viz/R Directory - Data_Viz/Sanchez_Sevastian_DataViz/11_arxiv_GRADED")
+arxiv <- read_csv("data/arxiv_subset.csv")
+```
+
+a) **Term Frequency Analysis**
+- Prepare the paper abstracts by removing stopwords, punctuation, and numbers
+- _Hint: In R, the `tidytext` package provides functions like `unnest_tokens()` to tokenize text; in Python, use `nltk` or `spaCy` for tokenization and stopword removal._
+- Create a bar chart showing the top 20 most frequent terms across all abstracts
+- _Hint: After tokenizing, count term frequencies and sort to find the most common terms._
+- Generate a comparative visualization (e.g., small multiples or grouped bars) showing how the top 10 terms differ between the years 2019 and 2023
+- _Hint: Use `update_date` as the source of the paper year._
+
+## Part 1a: Term Frequency, setup 
+```{r}
+# Tokenizing and cleaning abstracts
+abstract_words <- arxiv %>%
+  select(id, abstract, update_date) %>%
+  unnest_tokens(word, abstract) %>% # Splits into words
+  filter(!str_detect(word, "\\d")) %>% # Removes numbers
+  anti_join(get_stopwords()) %>% # Removes stopwords
+  filter(!word %in% c("’", "“", "”", "–")) %>%  # Removes punctuation attached to words
+  mutate(word = lemmatize_words(word)) #lemmatizes words (matches words to root word)
+
+# Identifying top 20 terms across all abstracts (2018-2023)
+top_terms_all <- abstract_words %>%
+  count(word, sort = TRUE) %>%
+  slice_max(n, n = 20)
+
+# Plot:  top 20 terms across all abstracts (all years)
+ggplot(top_terms_all, aes(x = reorder(word, n), y = n, fill = n)) + #descending order 
+  geom_col() +
+  scale_fill_gradient(low = "#6878ad", high = "#3D5296FF") +
+  coord_flip() +
+  labs(x = NULL, y = 'Counts', 
+       title = 'Top 20 Most Frequent Words', 
+       subtitle = 'Analyzing Abstracts from ArXiv Journal Publications (2018-2023)') +
+  theme_minimal() + theme(legend.position="none")
+```
+
+Note: I initially applied the Snowball package in an attempt to handle words that contain the same root but different ending (e.g., network and networks). The output of stemming, which is the process of truncating words to roots, resulted in an output of non-real words (propos, measur, etc.). I then tried lemmatization using the textstem package, designed to convert words to their dictionary stem-word (lemma) using linguistic rules (which I will not talk about). Inputting this into my pipeline (seen above) resolved the issue because there are no longer multiple variations of the same word or stems of words (which aren't words). 
+
+
+```{r}
+# Filters to words from 2019 and 2023 only
+abstract_words_19_23 <- abstract_words %>%
+  mutate(year = year(update_date)) %>% # extracts only year in 'update_date' column
+  filter(year %in% c(2019, 2023)) # filters for only 2019 and 2023
+
+#DF term frequency: counts words from these years
+term_freq_year <- abstract_words_19_23 %>%
+  count(year, word, sort = TRUE)
+
+# Vector: gets top 10 terms specifically aggregated from 2019 and 2023
+top_terms_19_23 <- term_freq_year %>%
+  group_by(word) %>%
+  summarise(total = sum(n)) %>%
+  slice_max(total, n = 10) %>% #top 10 words 
+  pull(word)
+
+# Filter to these top terms
+comparison_data <- term_freq_year %>%
+  filter(word %in% top_terms_19_23) %>%
+  complete(year, word, fill = list(n = 0))   # Ensure all terms appear in both years
+
+#Plot: top 10 words 
+ggplot(comparison_data, aes(x = reorder(word, n), y = n, fill = factor(year))) +
+  geom_col(position = "dodge") +
+  scale_fill_manual(values = c("2019" = "#3D5296FF", "2023" = "#36A9ABFF")) +
+  coord_flip() +
+  labs(x = NULL, y = 'Counts', 
+       title = 'Top 10 Most Frequent Words (2019 vs. 2023)', 
+       subtitle = 'Analyzing Abstracts from ArXiv Journal Publications') +
+  theme_minimal()
+
+```
+This analysis, clearly shows a significant shift in the popularity of words used in abstracts between the years 2019 and 2023. When we aggregate and count the frequency of words across all abstracts, regardless of year, and then identify the top 10 words, we notice great variation. Based on word frequency across allyears, we found that 2023 contained more of the most frequently used words across abstracts compared to 2019. This suggests that 2023 articles contain more words that are more commonly used in journal articles within the years 2018-2023 compared to those of 2019. Visially, it seems there is around a 0.5 (0.4-0.6) difference in word use across the top 10 words.  
+
+
+b) **Word Cloud**
+- Option 1: Generate a word cloud of the 100 most frequent meaningful terms in the abstracts, with proper color encoding and layout.
+- _Hint: Use the `wordcloud` package in R to create visualizations with control over colors and sizes._
+
+## 1b: Word Cloud
+```{r}
+#setting up
+top_100 <- abstract_words %>%
+  count(word, sort = TRUE) %>%
+  slice_max(n, n = 100)
+
+#plotting
+wordcloud(top_100$word, top_100$n,
+          scale = c(3, 0.5), colors = viridis::viridis(100))
+```
+Based on the word cloud, we also notice that the words 'network' and 'model' are highly distinquishable compared to all other top 100 words. Interestingly, we this reflected in both bar graphs, showing a large difference in the rate of frequency between the words 'network' and 'model' and all other words. 

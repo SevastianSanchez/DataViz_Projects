@@ -1,0 +1,508 @@
+---
+title: "Assignment 1 - Dating"
+output: html_notebook
+date: 2025-02-12
+author: Sevastian Sanchez
+editor_options: 
+  chunk_output_type: inline
+---
+
+![](images/clipboard-2348474118.png)
+
+## Scenario
+
+Imagine you are a data scientist at a respected media outlet -- say the "New York Times". Your editor wants to support the writing of a feature article about *How Couples Meet and Stay Together*. Your editor-in-chief asks you to analyze some data from an [extensive survey conducted by a researcher at Stanford University](https://data.stanford.edu/hcmst).
+
+Since there is **no way that all features of the data can be represented** in such a memo, feel free to pick and choose some patterns that would make for a good story -- outlining important patterns and presenting them in a visually pleasing way.
+
+The full background and text of the story will be researched by a writer of the magazine -- your input should be based on the data and some common sense (i.e. no need to read up on this). It does help, however, to briefly describe what you are presenting and what it highlights.
+
+Provide **polished plots** that are refined enough to include in the magazine with very little further manipulation (already include variable descriptions [if necessary for understanding], titles, source [e.g. "How Couples Meet and Stay Together (Rosenfeld, Reuben, Falcon 2018)"], appropriate colors, fonts etc.) and are understandable to the average reader of the "New York Times". The design does not need to be NYTimes-like. Just be consistent.
+
+## Data
+
+We will be using the 2017 wave of the HCMST survey - provided as `HCMST_couples.rds`. The file `HCMST_variable_descriptions.pdf` contains most of the variable descriptions and coding of responses.
+
+```{r}
+library(dplyr)
+library(tidyverse)
+library(ggthemes)
+library(patchwork)
+library(ggplot2)
+library(forcats)
+library(plotly)
+library(DT)
+
+
+setwd("~/Desktop/Spring 2025/Data Viz/R Directory - Data_Viz/Sanchez_Sevastian_DataViz/07_parking_GRADED")
+filename <- file.choose()
+couples <- readRDS(filename)
+
+# extracting vars and creating df
+df <- data.frame(ID = couples$CaseID, 
+                 couples$DOV_Branch, 
+                 ship_status = couples$partnership_status, 
+                 meeting_type = couples$meeting_type, 
+                 year_met = couples$Q21A_Year, 
+                 month_met = couples$Q21A_Month,
+                 year_begin = couples$Q21B_Year,
+                 year_liv_tog = couples$Q21C_Year,
+                 year_mar = couples$Q21D_Year,
+                 resp_age = couples$ppage,
+                 part_age = couples$Q9,
+                 resp_gender = couples$ppgender,
+                 duration = couples$relate_duration_at_w6_years,
+                 ship_status = couples$partnership_status, 
+                 resp_party = couples$partyid7,
+                 part_party = couples$w6_q12,
+                 ended_nonmar = couples$w6_relationship_end_nonmar, 
+                 ended_mar = couples$w6_relationship_end_mar
+                 )
+```
+
+## Tasks
+
+### 1. Dating Trends Over Time
+
+a)  Visualize how the mode of meeting for the first time has changed over the years. Create two (2) charts in this section to highlight some important pattern(s).
+
+**Wrangling and Cleaning**
+
+```{r}
+# grouping meeting places into 6 categories [type_met]
+df <- df %>%
+  mutate(type_met = case_when(
+    meeting_type %in% c("Internet", "Internet Dating or Phone App", "Internet Social Network", "Online Gaming", "Internet Chat", "Internet Site", "Met Online") ~ "Online",
+    meeting_type %in% c("Primary or Secondary School", "College") ~ "School/College",
+    meeting_type %in% c("Business Trip", "Work Neighbors", "Customer-Client Relationship") ~ "Work-Related Activity",
+    meeting_type %in% c("Bar or Restaurant", "Private Party", "Church", "Volunteer Organization") ~ "Social Settings",
+    meeting_type %in% c("Blind Date", "Military", "One-time Service Interaction", "On Vacation", "Public Place") ~ "Special Circumstance/Other",
+    TRUE ~ "Other"
+  ))
+
+# filter to only rows with years reported (no NA's or 'Refused') 
+df_filtered <- filter(df, !is.na(year_met) & year_met != "Refused")
+
+# Preparing for chart 2 data 
+df_filtered$years_met_num <- as.numeric(as.character(df_filtered$year_met))
+
+# Group years into 10-year intervals starting from 1930
+df_filtered <- df_filtered %>%
+  mutate(year_group = cut(years_met_num,
+                          breaks = seq(1930, 2040, by = 10), # Define decade intervals
+                          labels = c("1930-1939", "1940-1949", "1950-1959", 
+                                     "1960-1969", "1970-1979", "1980-1989", 
+                                     "1990-1999", "2000-2009", "2010-2019",
+                                     "2020-2029", "2030-2039"),
+                          right = FALSE)) # Left-inclusive intervals
+
+```
+
+**Custom Palette**
+
+```{r}
+palette <- c("#7D7C84", "#af5265", "#f9b97f", "#d3d3d3", "#567b81")
+```
+
+**Base graph**
+
+```{r}
+# Base graph: Mode of meeting [All respondents][no time][overall]
+base_graph <- ggplot(df, aes(x = fct_rev(fct_infreq(type_met)),
+                          fill= type_met, # different color by meeting type 
+                          stat = "identity"))+ 
+  geom_bar(width = 0.6)+
+  coord_flip()+ #turns the boxplot on its side
+  scale_fill_manual(values = palette)+ #palette
+  labs(x=NULL, y= "Counts", title = "How did you meet your partner?", fill = "Meeting Type")+
+  theme_minimal()
+
+base_graph + theme(legend.position = "none")
+
+```
+
+**Chart 1: stacked bar (counts)**
+
+```{r}
+# Chart 1: Meeting mode, frequency over time [filters NAs & 'Refused']
+
+# Ensure year_met is numeric
+df_filtered <- df_filtered %>%
+  mutate(year_met = as.numeric(as.character(year_met)))  # Convert factor to numeric
+
+# Stacked bar plot, over time [year_met: ungrouped]
+graph_1 <- ggplot(df_filtered, aes(x = year_met, fill = type_met))+
+  geom_bar(width = .75)+
+  scale_x_continuous(breaks = seq(1940, 2020, by = 10))+
+  scale_fill_manual(values = palette)+
+  labs(x = NULL, y = "Counts", fill = "Meeting Type",
+       title = "How people met their partners over time (frequency)")+
+  coord_fixed(ratio = 0.2) +  # Adjust aspect ratio (smaller values stretch horizontally)+
+  theme_minimal()+
+  theme(axis.text.x = element_text(angle = 75, hjust = 0.8, size = 7))
+  
+graph_1
+
+```
+
+**Graph 2: stacked bar (proportions)(grouped)**
+
+```{r}
+# Graph 2: Meeting mode, percentage over time [filters NAs][Stacked Bar Chart]
+
+# Filled bar plot, over time 
+graph_2 <- ggplot(df_filtered, aes(x=year_group, fill=type_met))+
+  geom_bar(position = "fill", width = 0.6)+
+  scale_fill_manual(values = palette)+
+  labs(x = "Decade", y = "Percent(%)", fill = "Meeting Type",
+       title = "How people met their partners over time (%)")+
+  theme_minimal()+
+  theme(axis.text.x = element_text(angle = 70, hjust = 1, vjust = 1.15, size=7))
+
+graph_2
+```
+
+b)  Create an alternative visualization of the same data. Discuss which visualization you recommend to the editor and why. Rely on at least three specific data visualization principles or theories discussed in class to justify your choice.
+
+**Chart 3: Line Graph (Alternative)**
+
+```{r}
+#frequency (counts) of meeting type over time
+
+# dataframe: count meeting types by year
+line <- df_filtered %>%
+  group_by(year_met, type_met) %>%  # Group by year and meeting type
+  dplyr::summarise(count = n(), .groups = "drop")  # Count occurrences, using dplyr package 
+
+# Basic line graph
+graph_3 <- ggplot(line, aes(x = year_met, y = count, color = type_met, group = type_met)) +
+  scale_color_manual(values = palette)+
+  geom_line(alpha=0.85, linewidth = 0.75)+
+  scale_x_continuous(breaks = seq(1940, 2020, by = 10))+
+  geom_point(alpha=0.75, size=1)+
+  coord_fixed(ratio = 0.5) + 
+  labs(
+    title = "Meeting Type Populatity Over Time",
+    x = "Year",
+    y = "Count",
+    color = "Meeting Type"
+  )+ 
+  theme_minimal()+ 
+  theme(axis.text.x = element_text(angle = 75, hjust = 1, size = 7)) # Add lines for each meeting type
+
+graph_3
+```
+
+**My recommendation**: Chart 1 is nice for visualizing changes in the the frequency of modes every year, while drawing attention to the rise of some modes (i.e., internet). However, chart 1 might not be the best means of comparing proportional distribution. To combat this, chart 2 was created to explore the share (%), with years grouped into decades. While chart 2 does a better job than chart 1 at highlighting which modes are more popular than others over time, aggregating by decade results in measurement error which can mislead viewers -- a lot of changes can happen in 10 years. The last vizualization, chart 3, circumvents these issues. Not only does a frequency-based line graph allow viewers to clearly decipher which modes are above and below others in terms of popularity, but it also allows us to compare across all years. I would recommend chart 3.
+
+### 2. Age is Just a Number
+
+a)  Create one (1) visualization to show the relationship between a respondent's age and their partner's age, accounting for the gender of the respondent? Identify the main pattern in the graph via an annotation directly added to the plot.
+
+**Chart 4: Scatterplot**
+
+```{r}
+# respondent_age: The age of the respondent = resp_age
+# partner_age: The age of their partner = part_age
+# gender: The gender of the respondent = resp_gender
+
+# Scatter plot with regression lines
+graph_4 <- ggplot(data = df, aes(x = resp_age, y = part_age, color = resp_gender)) +
+  geom_point(alpha = 0.5, size=1)+  # Scatter points with some transparency
+  geom_smooth(method = "lm", se = TRUE)+ # Adding regression lines
+  scale_color_manual(values = c("#567b81", "#af5265", "#7D7C84"))+
+  labs(title = "Relationship Between Respondent's Age and Partner's Age",
+       x = "Respondent's Age",
+       y = "Partner's Age",
+       color = "Gender"
+       )+
+  annotate("text", x = 100, y = 12, label = "Ages couples are positively correlated,
+    with slight differences by gender",
+    color = "#7D7C84", size = 3.5, fontface= "bold.italic", hjust = 1, linewidth=1)+
+  theme_minimal()
+
+graph_4
+```
+
+b)  Use Edward Tufte's principles to critique the plot above. Which of the changes would improve the plot in your opinion?
+
+**Answer**: If I were Tufte, I would say that the color, the grid lines, and the relatively large data points are unnecessary. Based on data-inc-ration alone, the graph is not at par with what Tuft would have visioned for a effective and compelling vizual aid. I think that the scatter plot would improve (from Tufte standards) from smaller lm lines, and smaller data points. Additionally, I would unbold the annotation/caption.
+
+### 3. Politics and Dating
+
+a)  Explore how the political affiliation of partners affects how couples meet and stay together. Create two (2) charts in this section. Make sure to use some variation in the type of visualizations. Discuss which visualization you recommend to your editor and why.
+
+**Cleaning & Wrangling**
+
+```{r}
+# ensure factor levels align 
+df$resp_party <- factor(df$resp_party, levels = union(levels(df$resp_party), levels(df$part_party)))
+df$part_party <- factor(df$part_party, levels = union(levels(df$resp_party), levels(df$part_party)))
+
+# Creates 2 new categorical variables: summarizes respondents' and partners' political affiliations into three possibilities (dem, ind, rep)
+library(dplyr)
+
+df <- df %>%
+  mutate(resp_party_type = case_when(
+    resp_party %in% c("Strong Democrat", "Not Strong Democrat", "Leans Democrat") ~ "Dem",
+    resp_party %in% c("Undecided/Independent/Other") ~ "Ind",
+    resp_party %in% c("Strong Republican", "Not Strong Republican", "Leans Republican") ~ "Rep" # Assign NA for any unexpected values
+  ))
+
+df <- df %>%
+  mutate(part_party_type = case_when(
+    part_party %in% c("Strong Democrat", "Not Strong Democrat", "Leans Democrat") ~ "Dem",
+    part_party %in% c("Undecided/Independent/Other") ~ "Ind",
+    part_party %in% c("Strong Republican", "Not Strong Republican", "Leans Republican") ~ "Rep"
+  ))
+
+# Create the alignment variable: party_pair 
+df <- df %>%
+  mutate(party_pair = paste(resp_party_type, part_party_type, sep = "-"))
+
+# filtering NA pairs
+party_pair_filtered <- df %>%
+  filter(party_pair != "Dem-NA" & party_pair != "Ind-NA" & party_pair != "Rep-NA")
+
+```
+
+**Graph 5: Stacked Barplot (counts)**
+
+```{r}
+#graph 5: Stacked bar chart for meeting types by partner alignment 
+graph_5 <- ggplot(party_pair_filtered, aes(x = party_pair, fill = type_met)) +
+  geom_bar(position = "Stack") +  # Normalize to proportions
+  coord_flip()+
+  scale_fill_manual(values = palette)+
+  labs(
+    title = "Most Popular Meeting Types by Party Alignment",
+    x = "Political Alignment",
+    y = "Counts",
+    fill = "Meeting Type"
+  ) +
+  theme_minimal()+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+graph_5
+```
+
+```{r}
+# New DF: Count occurrences of meeting types for each alignment
+party_pair_df <- df %>%
+  group_by(party_pair, type_met) %>%
+  dplyr::summarise(count = n(), .groups = "drop")
+```
+
+**Chart 6: Boxplot**
+
+```{r}
+# Chart 6: boxplot showing party alignment on duration of relationships  
+
+graph_6 <- ggplot(party_pair_filtered, aes(x = party_pair, y = duration, fill = party_pair)) +
+  geom_boxplot() +
+  coord_flip()+
+  scale_fill_manual(values = c("#567b81", "#567b81", "#567b81", "#d3d3d3", "#d3d3d3", "#d3d3d3", "#af5265", "#af5265", "#af5265"))+
+  labs(
+    title = "Relationship Duration by Political Alignment",
+    x = NULL,
+    y = "Duration of Relationship (Years)",
+    fill = NULL
+  )+ 
+  theme_minimal()+ theme(legend.position="none")
+
+graph_6
+
+```
+
+**Discussion**:
+
+b)  Write a short narrative (\~150 words) based on your visualization, integrating data insights with a compelling story. This narrative should be suitable for a feature article, highlighting key findings and their implications.
+
+**Narrative**: The way couples meet and the longevity of their relationships seem closely tied to political alignment. Social settings dominate as the most popular meeting type for politically aligned couples, such as "Dem-Dem" and "Rep-Rep," while mixed-affiliation couples like "Dem-Ind" show a more diverse distribution of meeting types, including online platforms and work-related activities. This suggests that shared political beliefs may streamline social circles, making it easier for like-minded individuals to connect.
+
+When it comes to relationship duration, couples with the same political affiliation, particularly "Dem-Dem" and "Rep-Rep," tend to have longer-lasting relationships compared to mixed-affiliation pairs. This pattern hints at the stabilizing influence of shared values and worldviews on partnerships. These findings highlight how political identity extends beyond ideology, influencing both how couples form and how they endure over time.
+
+### 4. Your Turn to Choose
+
+There are lots of other variables that could make for an interesting story, for example, educational background differences, relationship stages (First Met, Romantic, Live together & Married), regional patterns, relationship break ups, sexual behavior etc. Select some variables of your choice to tell a story that captures an interesting insight into the data.
+
+Create one (1) chart in this section to highlight some important patterns. Briefly discuss which visualization you recommend to your editor, why you think the visualization is useful, and which patterns it serves to highlight.
+
+```{r}
+# probability of marriage across meeting types 
+df_status_mar <- df %>%
+  filter(ship_status== "married")
+
+# Summarize counts of meeting types for married respondents
+pie_mar_df <- df_status_mar %>%
+  group_by(type_met) %>%
+  dplyr::summarise(count = n(), .groups = "drop")
+
+# Pie chart: marriage across meeting types 
+graph7.1 <- ggplot(pie_mar_df, aes(x = "", y = count, fill = type_met)) +
+  geom_bar(stat = "identity", width = 1, color = "white")+ # Create bars
+  scale_fill_manual(values = palette)+
+  coord_polar("y", start = 0)+ # Transform to pie chart
+  #theme_void() + # Remove axes and grids
+  labs(title = "Comparing Meeting Types Between Married and Divorced/Separated Respondents",
+    y = "Married", x="percent",
+  )+
+  theme_minimal()+ 
+  theme(legend.position="none")+
+  theme(axis.text.x = element_blank(),
+    axis.ticks.x = element_blank())
+```
+
+```{r}
+# probability of divorce, separation, breakup across meeting types 
+df_status_div_sep <- df %>%
+  filter(ended_mar== "divorce" | ended_mar == "separation with no divorce" | ended_nonmar == "We broke up")
+
+# Summarize counts of meeting types for married respondents
+pie_nonmar_df <- df_status_div_sep %>%
+  group_by(type_met) %>%
+  dplyr::summarise(count = n(), .groups = "drop")
+
+# Pie chart: divorce/separation across meeting types 
+graph7.2 <-ggplot(pie_nonmar_df, aes(x = "", y = count, fill = type_met)) +
+  geom_bar(stat = "identity", width = 1, color = "white")+ 
+  scale_fill_manual(values = palette)+
+  coord_polar("y", start = 0) + # Transform to pie chart
+  #theme_void() + # Remove axes and grids
+  labs(
+    fill = NULL, x="percent",
+    y="Divorced/Separated"
+  )+
+  theme_minimal()+ 
+  theme(
+    axis.text.x = element_blank(),   # Remove x-axis text
+    axis.ticks.x = element_blank(),  # Remove x-axis ticks
+    plot.title = element_text(hjust = 0.5, size = 14), # Center and adjust title size
+    legend.position = "none"
+  )
+
+graph_7_comb <- graph7.1 + graph7.2
+graph_7 <- graph_7_comb + theme(legend.position="right")
+graph_7
+```
+
+**Discussion**: The dual pie chart effectively compares how meeting types differ between married and divorced/separated respondents. It highlights that social settings are prominent for both groups, while work-related activities are more common among married couples. The use of percentages within each slice (observing the two interactive plots) would make the comparison even clearer, allowing readers to easily grasp the relative importance of each meeting type.
+
+## Interactivity
+
+### 5. Make Two Plots Interactive
+
+a)  Choose 2 of the plots you created above and add interactivity. For at least one of these interactive plots, this should not be done through the use of `ggplotly`
+
+**Interactive Plot 1: plotly piechart version**
+```{r}
+library(plotly)
+
+# Create interactive pie chart
+interactive_pie_mar <- plot_ly(
+  data = pie_mar_df,
+  labels = ~type_met,    # Meeting types as labels
+  values = ~count,       # Counts as values
+  type = 'pie',          # Specify pie chart
+  textinfo = 'label+percent', # Show labels and percentages
+  hoverinfo = 'label+value+percent', # Hover info: label, value, percentage
+  marker = list(colors = palette) # Custom colors
+) %>%
+  layout(
+    title = "Distribution of Meeting Types Among Married Respondents",
+    legend = list(orientation = "h") # Horizontal legend
+  )
+interactive_pie_mar
+
+# Create interactive pie chart
+interactive_pie_divsep <- plot_ly(
+  data = pie_nonmar_df,
+  labels = ~type_met,    # Meeting types as labels
+  values = ~count,       # Counts as values
+  type = 'pie',          # Specify pie chart
+  textinfo = 'label+percent', # Show labels and percentages
+  hoverinfo = 'label+value+percent', # Hover info: label, value, percentage
+  marker = list(colors = palette) # Custom colors
+) %>%
+  layout(
+    title = "Distribution of Meeting Types Among Married Respondents",
+    legend = list(orientation = "h") # Horizontal legend
+  )
+interactive_pie_divsep
+```
+
+
+```{r}
+# Interactive Plot 2:
+ggplotly(graph_3)
+
+```
+
+**Interactive Plot 2:**
+
+b)  Briefly describe to the editor why interactivity in these visualizations is particularly helpful for a reader, referencing user engagement theories or interaction design principles.
+
+**Describe**: Interactivity in these visualizations allows readers to explore the data in a more engaging and intuitive way. For example, hovering over the pie chart slices reveals exact percentages and meeting types, making it easier to compare how married and divorced/separated couples met. Similarly, the line graph enables readers to focus on specific trends, such as the sharp rise of online meeting platforms after 2000. These features make the data more accessible and encourage readers to uncover insights on their own.
+
+### 6. Data Table
+
+To allow the reader to explore the survey data by themselves a bit, select a few useful variables, rename them appropriately for the table to be self-explanatory, and add an interactive data table to the output. Make sure the columns are clearly labeled. Select the appropriate options for the data table (e.g. search bar, sorting, column filters, in-line visualizations etc. -- as far as the tools supplied in lecture allow).
+
+```{r}
+# Interactive table:
+library(DT)
+
+# Select and rename relevant columns
+interactive_tab <- df %>%
+  select(
+    type_met, 
+    ship_status, 
+    duration,
+    resp_gender,
+    resp_party, 
+    part_party
+  ) %>%
+  rename(
+    `Meeting Type` = type_met,
+    `Relationship Status` = ship_status,
+    `Length of Relationship (Years)` = duration,
+    `Respondent's Gender` = resp_gender,
+    `Respondent's Political Affiliation` = resp_party,
+    `Partner's Political Affiliation` = part_party
+  )
+
+# Create the interactive data table
+datatable(
+  interactive_tab,
+  class = "cell-border stripe hover compact",  # Styling options
+  filter = "top",                              # Add column filters at the top
+  options = list(
+    pageLength = 10,                           # Number of rows per page
+    autoWidth = TRUE,                          # Automatically adjust column widths
+    dom = 'Bfrtip',                            # Add buttons for export/download
+    buttons = c('copy', 'csv', 'excel')        # Export options
+  ),
+  caption = "Explore Meeting Types and Relationship Details of Survey Respondents"
+)
+
+```
+
+## Technical Details
+
+The data comes in a reasonably clean file. However, if you do find issues with the data, recode any values, etc. please make this clear in the code (and if significant add into the description).
+
+If needed for your visualization, you can add visual drapery like icons, images etc. but you are certainly not obligated to do that. What is important, however, to *use a consistent style across all your visualizations*.
+
+Part of the task will be transforming the dataset into a shape that allows you to plot what you want. For some plots, you will necessarily need to be selective in what to include and what to leave out.
+
+Make sure to use *at least* three different types of graphs, e.g. line graphs, scatter, histograms, bar charts, dot plots, heat maps, etc.
+
+## Submission
+
+Please follow the [instructions](/Exercises/homework_submission_instructions.md) to submit your homework. The homework is due on Friday, February 21 at 5pm.
+
+## Please Stay Honest!
+
+Yes, this type of data has been analyzed before. If you do come across something, please no wholesale copying of other ideas. We are trying to evaluate your abilities in using the packages we discussed to create data visualization not the ability to do internet searches. Similarly, please stay away from solutions / code created by generative AI. Here is your chance to learn and apply the concepts we have discussed in class!
+
+Also, this is an individually assigned exercise -- please keep your solution to yourself!

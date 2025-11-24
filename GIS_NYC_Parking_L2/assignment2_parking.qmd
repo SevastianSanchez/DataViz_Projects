@@ -1,0 +1,625 @@
+---
+title: "Assignment 2: Mapping Parking Violations in NYC"
+author: Sevastian Sanchez
+date: 2025-03-06
+format: 
+  html:
+    embed-resources: true
+    keep-md: true
+execute:
+  keep-md: true
+---
+
+# Parking Violations in NYC
+
+## Data
+
+For this assignment, we are going to investigate data on parking violations in NYC. 
+
+### Parking violations in 2020/21
+
+NYC Open Data has data on all [parking violations issued in NYC](https://data.cityofnewyork.us/City-Government/Parking-Violations-Issued-Fiscal-Year-2021/pvqr-7yc4) since 2014. The updated dataset provided for 2025 currently includes about 26 million observations. To make the assignment manageable, I have reduced it to a subset of tickets issued in Jan 2025 and to Manhattan precincts only, yielding about 200 thousand tickets.
+
+Two support files are also included in the `parking` sub folder:
+
+  - the **descriptions of all variables**
+  - the **dictionary of violation codes**
+  
+### Police Precincts
+
+A second data source is the [shape files of police precincts in NYC](https://www1.nyc.gov/site/planning/data-maps/open-data/districts-download-metadata.page). 
+
+## Exercise
+
+### 1. Data exploration
+
+Before focusing on the spatial part of the data, let's explore the basic patterns in the data. 
+
+```{r}
+#Libraries 
+library(tidyverse)
+library(leaflet) # interactive maps 
+library(sf) # loading shapefiles 
+library(DT) # interactive charts 
+library(readxl)
+library(RColorBrewer)
+library(patchwork)
+
+#setwd
+setwd("~/Desktop/Spring 2025/Data Viz/DataViz_Course_Repo/Exercises/07_parking_GRADED/data/parking")
+
+#loading data
+park_vio <- read.csv("parkingNYC_Jan2025.csv")
+
+#column names & descriptions 
+#col_des <- read.csv("parking_variable_descriptions.csv")
+
+#fines & types of violations codebook 
+viol_n_fine <- read.csv("Parking_ViolationCodes_January2020.csv")
+```
+
+*color pallet*
+```{r}
+palette <- c('#f0f9a1', '#d9ed92', '#99d98c', '#76c893', '#52b69a', '#34a0a4', '#168aad', '#1a759f', '#1e6091', '#184e77')
+
+#modified palette
+palette_heat <- c('#b5e48c', '#99d98c', '#52b69a', '#168aad', '#1a759f', '#1e6091')
+```
+
+#### a) Violation Code and Fine Amounts
+
+Add the violation code descriptions and fine amounts to the data file. For simplicity, ignore the differing fine amounts above and below 96th street. _Simply use the fine amount for below 96th street for all violations._
+
+Provide a visual overview of the top 10 most common types of violations. Compare how this ranking differs if we focus on the total amount of revenue generated.
+
+```{r}
+#selecting & renaming necessary vars from viol_n_fine
+viol_n_fine <-  viol_n_fine %>% 
+  select(VIOLATION.CODE, VIOLATION.DESCRIPTION, Manhattan..96th.St....below..Fine.Amount...) %>%
+  rename(Violation.Code = VIOLATION.CODE,
+         violation.descr = VIOLATION.DESCRIPTION,
+         fine_blw96th = Manhattan..96th.St....below..Fine.Amount...)
+
+#merged dataframe 
+df_vio_fines <- left_join(park_vio, viol_n_fine, by = "Violation.Code")
+df_vio_fines
+
+#SELECTING NECESSARY VARS FROM MAIN DF 
+df_vio_fines <- df_vio_fines %>% 
+  dplyr::select(Violation.Code, violation.descr, fine_blw96th, Vehicle.Color, Vehicle.Year, Plate.ID, everything())
+
+```
+
+#Violation Frequency DF
+```{r}
+#frequency of violations 
+frequency_table <- table(df_vio_fines$violation.descr) # frequency table 
+frequency_table <- sort(frequency_table, decreasing = TRUE) # descending order
+top_10_frequent <- head(frequency_table, 10) # Select the top 10 elements
+
+#frequency table output
+top_10_frequent
+
+# make into dataframe
+top_10_vio <- as.data.frame(top_10_frequent) 
+
+# renaming columns in top_10_frequent dataframe
+colnames(top_10_vio) <- c("violation.descr", "frequency")
+
+# Create a lookup dataframe with unique violation descriptions and their codes
+violation_codes <- df_vio_fines %>%
+  select(violation.descr, Violation.Code, fine_blw96th) %>%
+  distinct()
+
+# Join the top_10_freq dataframe with the lookup dataframe
+top_10_vio <- left_join(top_10_vio, violation_codes, by = "violation.descr")
+
+#renaming again
+colnames(top_10_vio) <- c("violation", "frequency", "Violation.Code", "fine_amount")
+
+# Print output df
+print(top_10_vio) 
+```
+
+**rotated bar chart: Ranking of most common types violations (counts)**
+```{r}
+violation_colors <- c(
+  "FAIL TO DSPLY MUNI METER RECPT" = "#1e6091",
+  "NO STANDING-DAY/TIME LIMITS" = "#1a759f", 
+  "NO PARKING-STREET CLEANING" = "#34a0a4",
+  "NO PARKING-DAY/TIME LIMITS" = "#52b69a",
+  "NO STANDING-COMM METER ZONE" = "#76c893",
+  "FAIL TO DISP. MUNI METER RECPT" = "#99d98c",
+  "DOUBLE PARKING" = "#b5e48c",
+  "FIRE HYDRANT" = "#d9ed92",
+  "INSP. STICKER-EXPIRED/MISSING" = "#e5f5b8",
+  "NO STANDING-EXC. TRUCK LOADING" = "#f0f9d2"
+)
+
+
+top10_vio_frq <- ggplot(top_10_vio, aes(x = reorder(violation, frequency), y = frequency, fill = violation)) +
+  geom_col() +
+  scale_fill_manual(values = violation_colors) +
+  coord_flip() +
+  labs(x = NULL, 
+       y = NULL, 
+       title = "Top 10 Most Common Parking Violations") +
+  theme_minimal() +
+  theme(legend.position = "none", 
+        plot.title = element_text(size = 10, hjust = 0.5),
+        axis.text.y = element_text(size = 7)
+        )
+
+# Display
+top10_vio_frq
+
+```
+Compare how this ranking differs if we focus on the total amount of revenue generated.
+**Answer:**
+Interestingly, "NO STANDING-DAY/TIME LIMITS" generates the most revenue despite being only the second most common violation. "NO STANDING-COMM METER ZONE" ranks second in revenue but fifth in frequency. This comparison shows that violation frequency doesn't directly correlate with total revenue from the fines. some of the less frequent violations like "NO STANDING-COMM METER ZONE" must carry higher fine amounts, making them disproportionately high revenue sources.
+
+
+**rotated bar chart: Ranking of highest revenue source (total & per/violation)**
+```{r}
+#calculating total revenue(new column): frequency x fine_amount
+top_10_vio$total_rev <- top_10_vio$frequency*top_10_vio$fine_amount
+top_10_vio
+
+#total revenue bar chart 
+top10_vio_rev <- ggplot(top_10_vio, aes(x = reorder(violation, total_rev), y = total_rev, fill = violation))+
+  geom_col() +
+  scale_fill_manual(values = violation_colors)+
+  coord_flip()+
+  labs(x = NULL, 
+       y = NULL, 
+       title = "Top 10 Largest Revenue Sources by Parking Fines")+
+  theme_minimal() +
+  theme(legend.position = "none", 
+        plot.title = element_text(size = 10, hjust = 0.5),
+        axis.text.y = element_text(size = 7))
+
+#display
+top10_vio_rev
+
+#combining to put side by side 
+combined_fine_rev <- top10_vio_frq + top10_vio_rev
+combined_fine_rev
+```
+
+#### b) Average amount of fine by vehicle Color & Year
+
+Find an appropriate visualization to show the average amount of fine by vehicle color and vehicle year. Restrict your attention to non-commercial vehicles (see [vehicle plate type](https://dmv.ny.gov/registration/registration-class-codes).
+
+**average amount in fines paid by vehicle color and by vehicle year**
+```{r}
+#NEW DF: Subset to only commercial vehicles: plate type != COM
+vehicles_non_com <- subset(df_vio_fines, Plate.Type !="COM")
+
+# First, ensure top_years is properly formatted
+top_years <- sort(unique(vehicles_non_com$Vehicle.Year[vehicles_non_com$Vehicle.Year >= 2005 & vehicles_non_com$Vehicle.Year <= 2025]))
+top_years <- top_years[!is.na(top_years)]
+top_years <- head(top_years, 20)
+
+# Get top colors
+top_colors <- names(sort(table(vehicles_non_com$Vehicle.Color), decreasing = TRUE)[1:10])
+
+# Calculate average fine for each color-year combination
+heatmap_data <- vehicles_non_com %>%
+  filter(Vehicle.Color %in% top_colors, 
+         Vehicle.Year %in% top_years) %>%
+  group_by(Vehicle.Color, Vehicle.Year) %>%
+  summarize(avg_fine = mean(fine_blw96th, na.rm = TRUE), .groups = "drop") %>%
+  # Ensure Vehicle.Year is numeric for proper ordering
+  mutate(Vehicle.Year = as.numeric(as.character(Vehicle.Year)))
+
+# Create the heatmap with custom palette
+ggplot(heatmap_data, aes(x = factor(Vehicle.Year), y = Vehicle.Color, fill = avg_fine)) +
+  geom_tile() +
+  geom_text(aes(label = round(avg_fine, 0)), color = "white", size = 3) +
+  scale_fill_gradientn(colors = palette_heat, name = "Average Fine ($)") +
+  labs(title = "Average Fine by Vehicle Color and Year",
+       subtitle = "Non-commercial vehicles only",
+       x = NULL,
+       y = "Vehicle Color") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+Briefly describe your findings: 
+**Answer:** In order to be careful about the color labels, I did not assume some were the same (i.e., WHITE and WH are both white) and sum them together. This heat map would have looked very different if I had. That said, labels that have two letters (e.g., GY, BL, ...) have similar values across the years, while those that are spelt out (e.g., WHITE, BLUE...) has significantly more variation as clearly shown in the heatmap. Of those, the selections that are reletively higher than others in terms of average fine amount include but are not limited to 2013 blue cars (115), 2005 white cars (105), and 2005 blue cars (102).
+
+
+### 2. Map by Precincts
+
+Read in the shape files for the police precincts and remove all precincts outside of Manhattan. 
+
+```{r}
+# Load the precinct shapefile
+precincts <- sf::st_read(dsn = "~/Desktop/Spring 2025/Data Viz/R Directory - Data_Viz/Sanchez_Sevastian_DataViz/07_parking_GRADED/nypp_25a_shapefiles/nypp.shp")
+
+#show attribute table (first few rows)
+datatable(precincts, options = list(pageLength = 10))
+
+# Filter for Manhattan precincts only
+manh_precincts <- precincts %>%
+  filter(Precinct < 35)
+manh_precincts
+```
+
+#### a) Number of tickets, total fines, and average fines
+
+**Wrangling: Total Number of Tickets/Violations by Precinct**
+```{r}
+#total number of fines by precinct, filtered to Manhattan only 
+precinct_freq <- table(vehicles_non_com$Violation.Precinct)
+precinct_freq <- as.data.frame(precinct_freq)
+precinct_freq
+
+# Sort into columns by fine amount 
+precinct_fine_165 <- table(vehicles_non_com$Violation.Precinct[vehicles_non_com$fine_blw96th=='165'])
+precinct_fine_165 <- as.data.frame(precinct_fine_165)
+precinct_fine_115 <- table(vehicles_non_com$Violation.Precinct[vehicles_non_com$fine_blw96th=='115'])
+precinct_fine_115 <- as.data.frame(precinct_fine_115)
+precinct_fine_95 <- table(vehicles_non_com$Violation.Precinct[vehicles_non_com$fine_blw96th=='95'])
+precinct_fine_95 <-as.data.frame(precinct_fine_95)
+precinct_fine_65 <- table(vehicles_non_com$Violation.Precinct[vehicles_non_com$fine_blw96th=='65'])
+precinct_fine_65 <- as.data.frame(precinct_fine_65)
+
+#combined data 
+combined <- precinct_fine_95 %>%
+  left_join(precinct_fine_65, by = "Var1") %>%
+  left_join(precinct_fine_115, by = "Var1") %>%
+  left_join(precinct_fine_165, by = "Var1") %>%
+  left_join(precinct_freq, by = "Var1") %>% 
+  dplyr::rename(precinct = Var1, 
+                fine_95 = Freq.x, 
+                fine_65 = Freq.y, 
+                fine_115 = Freq.x.x, 
+                fine_165 = Freq.y.y, 
+                total_vio_counts = Freq)
+
+#replace NAs w/ Zeros
+combined <- combined %>% 
+  mutate(fine_95 = replace_na(fine_95, 0),
+         fine_65 = replace_na(fine_65, 0),
+         fine_115 = replace_na(fine_115, 0),
+         fine_165 = replace_na(fine_165, 0))
+
+#remove precincts not in Manhattan 
+combined <- head(combined, -3)
+combined
+
+```
+
+**Wrangling: The total amount of fines ($$$ revenue) by precinct**
+```{r}
+#calculating total fine amount per fine group (65, 95, 115, 165) per precinct 
+combined <- combined %>%
+  mutate(
+    fine_95_rev = fine_95 * 95,
+    fine_65_rev = fine_65 * 65,
+    fine_115_rev = fine_115 * 115,
+    fine_165_rev = fine_165 * 165
+  )
+
+# calculating total amount of fines (revenue) per precinct 
+combined <- combined %>%
+  mutate(total_rev = fine_95_rev + fine_65_rev + fine_115_rev + fine_165_rev)
+combined
+```
+
+**Wrangling: average amount of fines by precinct**
+*Total revenue / total number of tickets*
+```{r}
+combined <- combined %>% 
+  mutate(ave_fines = total_rev / total_vio_counts)
+combined
+```
+
+**Adding map variable from 'combined' to sf**
+```{r}
+#converting to integer for merging 
+combined <- combined %>% mutate(precinct = as.integer(as.character(precinct)))
+
+#adding columns to sf using 'precinct'
+manh_precincts <- manh_precincts %>%
+  left_join(combined %>% 
+              select(precinct, total_vio_counts, total_rev, ave_fines), #selecting specific map variables
+            by = c("Precinct" = "precinct"))
+```
+
+**MAP 1: Total Number of Tickets/Violations by Precinct**
+```{r}
+# identifying centroid
+manh_precincts <- manh_precincts %>%
+  mutate(centroid = st_centroid(geometry)) #st_centroid(): finds center of specified shape
+
+# identifies x and y cordinates from centroid 
+manh_precincts <- manh_precincts %>%
+  mutate(
+    label_x = st_coordinates(centroid)[,1],
+    label_y = st_coordinates(centroid)[,2]
+  )
+
+# plot precincts 
+plot_count <- ggplot(manh_precincts) +
+    geom_sf(aes(fill = total_vio_counts), 
+            color = "white", 
+            linewidth = 0.2)+ #plot map
+  scale_fill_gradientn(colors = palette_heat)+
+    geom_text(aes(x = label_x, y = label_y, label = Precinct), 
+              check_overlap = TRUE, #prevents overlapping 
+              size = 2,
+              color = "white",
+              fontface = "bold") +
+    labs(x=NULL, y=NULL,
+         fill = "Violation\n Counts") + 
+    theme_minimal()
+
+plot_count <- plot_count + 
+  ggtitle("Total Number of Parking Violations in \nManhattan by Precinct")+
+  theme(
+    plot.background = element_rect(fill = '#FAF9F6', color = NA),
+    legend.position = "bottom",
+    legend.title = element_text(size = 8),
+    legend.text = element_text(size = 6),
+    plot.title = element_text(hjust = 0.5, size = 7), 
+    axis.text.x = element_blank(),  # Remove x-axis text
+    axis.ticks = element_blank(),   # Remove tick marks
+    axis.title = element_blank()    # Remove axis titles
+    )
+plot_count
+
+```
+
+**MAP 2: Total amount of fines ($$$ revenue) by precinct**
+```{r}
+# plot rev map
+plot_rev <- ggplot(manh_precincts) +
+    geom_sf(aes(fill = total_rev), #adding 
+            color = "white", 
+            linewidth = 0.2)+ #plot map
+  scale_fill_gradientn(colors = palette_heat)+
+    geom_text(aes(x = label_x, y = label_y, label = Precinct), 
+              check_overlap = TRUE,  
+              size = 2,
+              color = "white",
+              fontface = "bold") +
+    labs(x=NULL,
+         y=NULL,
+         title = "Total Revenue Generated from Fines\nin Manhattan by Precinct",
+         fill = "Total $\n Collected")+ 
+  theme_minimal()+
+  theme(plot.background = element_rect(fill = '#FAF9F6', color = NA),
+    legend.position = "bottom",
+    legend.text = element_text(size = 8),
+    legend.title = element_text(size = 6),
+    plot.title = element_text(hjust = 0.5, size = 7),
+    axis.text.x = element_blank(),
+    axis.text.y = element_blank(),
+    axis.ticks = element_blank(), 
+    axis.title = element_blank() 
+    )
+plot_rev
+
+#CDCDCD or #E1E1E1
+#'#FAF9F6'
+```
+
+**MAP 3: Average amount of fines by precinct**
+```{r}
+# plot ave map
+plot_ave <- ggplot(manh_precincts) +
+    geom_sf(aes(fill = ave_fines), #adding 
+            color = "white", 
+            linewidth = 0.2)+ #plot map
+  scale_fill_gradientn(colors = palette_heat)+
+    geom_text(aes(x = label_x, y = label_y, label = Precinct), 
+              check_overlap = TRUE, #prevents text label overlapping 
+              size = 2,
+              color = "white",
+              fontface = "bold") +
+    labs(x=NULL,
+         y=NULL,
+         fill = 'Average \nFine ($)',
+         title = "Average Parking Fine Amount \n in Manhattan by Precinct") + 
+    theme_minimal() +
+  theme(plot.background = element_rect(fill = '#FAF9F6', color = NA),
+    legend.position = "bottom",
+    legend.text = element_text(size = 8),
+    legend.title = element_text(size = 6),
+    plot.title = element_text(hjust = 0.5, size = 7),
+    axis.text.x = element_blank(),
+    axis.text.y = element_blank(),
+    axis.ticks = element_blank(), 
+    axis.title = element_blank()  
+    )
+plot_ave
+
+counts_n_rev <- plot_count + plot_rev + plot_ave +
+  plot_layout(guides = "collect") & # legends together
+  theme(legend.position = "bottom")
+counts_n_rev
+```
+*Briefly describe what you learn from these maps in comparison. Which of these maps is the most representative of the data?*
+
+**Answer** putting the maps side-by-side helps to distinguish indicators by precinct. I believe that the average fine amount is probably the most distinguishable given that the total revenue and total frequency by precinct maps esentially show the same spread of the data. Although, it is interesting to see that the average fine is a lot higher in some precincts where there is relatively fewer parking violations (e.g. precinct 33 and 34) compared to others with high number of violations (e.g., precinct 19), but are also are fined much more on average. I think because of this, it could also be better to have these maps side by side to represent the data as opposed to just choosing one. 
+
+#### b) Types of violations
+
+I have added a grouping of the violation codes called `violation_group` to guide your visualization. Provide a faceted set of choropleth maps to capture each of these subgroups and show where different types of violations are more or less common. Choose a color scheme that allows you to highlight the main trends in the data.
+
+```{r}
+
+```
+
+
+### 3. Focus on the Upper East
+
+[Precinct 19](https://www1.nyc.gov/site/nypd/bureaus/patrol/precincts/19th-precinct.page) identifies the Upper East Side. The data currently does not provide latitude and longitude of the violation locations (and I am not sure what these `street_code` variables are for).
+
+#### a) Ignoring fire hydrants
+
+Restrict your data to parking violations related to fire hydrants (`Violation Code = 40`). Using the variables `Street Name` and `House Number` as well as the knowledge that these addresses are in the Upper East Side of Manhattan, geocode at least 500 addresses. Include a data table of these addresses and the latitude and longitude of these addresses in the output.
+
+```{r}
+library(ggmap)
+library(stringr)
+
+#subset: Violation.Code == 40
+fh_com_veh <- subset(df_vio_fines, Violation.Code == 40 & Violation.Precinct == 19)
+
+#API Key, stored elsewhere 
+source("~/Desktop/Spring 2025/Data Viz/APIs.R")
+
+#Function: cleaning and combining text data  
+combine_address <- function(col1, col2) {
+  # Convert inputs to character to ensure consistent handling
+  col1 <- as.character(col1)
+  col2 <- as.character(col2)
+  
+  # Check if col1 is a single directional letter (N, S, E, W)
+  is_directional <- col1 %in% c("N", "S", "E", "W")
+  
+  # Check if col2 starts with a directional letter
+  starts_with_directional <- str_detect(col2, "^[NSEW]\\s")
+  
+  if (is_directional && starts_with_directional) {
+    # Extract the first character and the rest of col2
+    first_char <- str_sub(col2, 1, 1)
+    rest_of_col2 <- str_sub(col2, 3) # Skip the space after the directional
+    # Combine without space between directional letters
+    return(paste0(col1, first_char, " ", rest_of_col2))
+  } else {
+    # Regular combination with space
+    return(paste(col1, col2))
+  }
+}
+
+#combining columns: 'full_address'
+fh_com_veh <- fh_com_veh %>%
+  mutate(full_address = mapply(combine_address, 
+                              `House.Number`, 
+                              `Street.Name`)) %>%
+  mutate(full_address = paste(full_address, "New York, NY"))
+
+#geocode 500 addresses using vars:`Street.Name` and `House.Number`
+fh_com_veh <- mutate_geocode(
+  fh_com_veh[1:1000,], 
+  location = full_address, 
+  output = "latlona"  # Returns lat, long, and the matched address
+)
+
+#filter: only addresses in Manhattan 
+fh_com_veh <- fh_com_veh %>%
+  filter(Violation.Code == 40 & Violation.Precinct == 19) %>% 
+  filter(!grepl("brooklyn|queens|staten|bronx", address, ignore.case = TRUE))
+
+#datatable: table of addresses with latitude and longitude
+tab_pr40 <- fh_com_veh %>% 
+  select(address, lon, lat, Violation.Precinct) %>% 
+  rename(Address = address,
+         Longitude = lon,
+         Latitude = lat,
+         Precinct = Violation.Precinct)
+tab_pr40 <- datatable(tab_pr40)
+tab_pr40
+```
+
+
+#### b) Interactive Map
+
+Provide an interactive map of the violations you geocoded using `leaflet`. Shows address, vehicle color, vehicle year, and precinct 
+
+```{r}
+violations_map <- leaflet(fh_com_veh) %>%
+  # Add a base map
+  addProviderTiles(providers$CartoDB.Positron) %>%
+  # Set the initial view to NYC
+  setView(lng = -74.0060, lat = 40.7128, zoom = 12) %>%
+  # Add markers with popups containing violation information
+  addMarkers(
+    ~lon, ~lat,
+    popup = ~paste(
+      "<b>Vehicle Color:</b>", Vehicle.Color, "<br>",
+      "<b>Vehicle Year:</b>", Vehicle.Year, "<br>",
+      "<b>Precinct:</b>", Violation.Precinct, "<br>",
+      "<b>Address:</b>", address
+    )
+  )
+
+# Display the map
+violations_map
+```
+
+#### c) Luxury cars
+Create another variable called `luxury_car` in which you identify luxury car brands using the `Vehicle Make` variable.
+
+Start with the previous map. Distinguish the points by whether the car is a luxury car. Add a legend informing the user about the color scheme. Also make sure that the added information about the car type is now contained in the popup information. Show this map.
+
+### d)
+Add marker clustering, so that zooming in will reveal the individual locations but the zoomed out map only shows the clusters. Show the map with clusters.
+
+```{r}
+luxury_brands <- c("ACURA", "AUDI", "BENTL", "BMW", "CADIL", "INFIN", "JAGUA", 
+                  "LAMBO", "LEXUS", "LINCO", "LU/M", "ME/BE", "MINI", "PORSC", 
+                  "ROVER", "TESLA", "VOLVO")
+
+#luxury car column 
+fh_com_veh <- fh_com_veh %>% 
+  mutate(luxary_car = ifelse(Vehicle.Make %in% luxury_brands, "Luxury", "Non-Luxury"))
+
+luxury_pal <- colorFactor(
+  palette = c('#99d98c', '#1a759f'),  # Light green for non-luxury, deep blue for luxury
+  domain = c("Non-Luxury", "Luxury")
+)
+
+# Updating map: distinguishing by car type 
+violations_map <- leaflet(fh_com_veh) %>%
+  # Add a base map
+  addProviderTiles(providers$CartoDB.Positron) %>%
+  # Set the initial view to NYC
+  setView(lng = -74.0060, lat = 40.7128, zoom = 12) %>%
+  # Add circle markers with colors based on luxury status
+  addCircleMarkers(
+    ~lon, ~lat,
+    color = ~luxury_pal(luxary_car),  # Color based on luxury status
+    radius = 3,
+    fillOpacity = 0.8,
+    stroke = TRUE,
+    weight = 1,
+    popup = ~paste(
+      "<b>Vehicle Color:</b>", Vehicle.Color, "<br>",
+      "<b>Vehicle Year:</b>", Vehicle.Year, "<br>",
+      "<b>Precinct:</b>", Violation.Precinct, "<br>",
+      "<b>Address:</b>", address, "<br>",
+      "<b>Luxury Brand?:</b>", luxary_car, "<br>"
+    ),
+     # Cluster markers when zoomed out
+    clusterOptions = markerClusterOptions(
+      disableClusteringAtZoom = 17,
+      spiderfyOnMaxZoom = FALSE,
+      zoomToBoundsOnClick = TRUE,
+      maxClusterRadius = 80,  
+      minClusterSize = 5    
+    ) 
+  ) %>%
+  # Add a legend
+  addLegend(
+    position = "bottomright",
+    pal = luxury_pal,
+    values = ~luxary_car,
+    title = "Vehicle Type", #vehicle type of vehicle status 
+    opacity = 0.7
+  )
+violations_map
+
+```
+
+## Submission
+
+Please follow the [instructions](/Exercises/homework_submission_instructions.md) to submit your homework. The homework is due on Monday, March 17.
+
+## Please stay honest!
+
+If you do come across something online that provides part of the analysis / code etc., please no wholesale copying of other ideas. We are trying to evaluate your abilities to visualized data not the ability to do internet searches. Also, this is an individually assigned exercise -- please keep your solution to yourself.
