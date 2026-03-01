@@ -39,5 +39,5 @@ This project explores parking violation data from NYC Open Data, focusing on ove
 
 ## Data Sources
 
-- [NYC Open Data — Parking Violations Issued (FY 2021)](https://data.cityofnewyork.us/City-Government/Parking-Violations-Issued-Fiscal-Year-2021/pvqr-7yc4)
+- [NYC Open Data — Parking Violations Issued](https://data.cityofnewyork.us/City-Government/Parking-Violations-Issued-Fiscal-Year-2021/pvqr-7yc4) (subset: Manhattan, January 2025)
 - [NYC Planning — Police Precinct Shapefiles](https://www1.nyc.gov/site/planning/data-maps/open-data/districts-download-metadata.page)

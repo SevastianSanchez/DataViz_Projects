@@ -34,9 +34,9 @@ Explored over 200,000 parking violations issued in Manhattan (January 2025) usin
 
 ---
 
-### 3. [Text & Network Analysis — ArXiv Papers](Text+NetworkAnalysis_Arxiv_L3/)
+### 3. [Text & Network Analysis — arXiv Papers](Text+NetworkAnalysis_Arxiv_L3/)
 
-Performed text mining and co-authorship network analysis on ~10,000 ArXiv papers from the *Physics and Society* category (2018–2023). Identified top terms via frequency analysis and word clouds, and built an interactive author collaboration network.
+Performed text mining and co-authorship network analysis on ~10,000 arXiv papers from the *Physics and Society* category (2018–2023). Identified top terms via frequency analysis and word clouds, and built an interactive author collaboration network.
 
 **Highlights:** Term frequency bar charts, year-over-year word comparisons, word clouds, and an interactive co-authorship network graph (visNetwork).
 
