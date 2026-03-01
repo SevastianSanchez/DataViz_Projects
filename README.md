@@ -1,6 +1,8 @@
 # Data Visualization Projects
 
-A collection of data visualization projects by **Sevastian Sanchez**, demonstrating skills in exploratory data analysis, geospatial mapping, text mining, and network analysis — all built in R.
+## About
+
+A collection of data visualization projects by **Sevastian Sanchez**, demonstrating skills in exploratory data analysis, geospatial mapping, text mining, and network analysis — all built in R. These projects were completed as part of a Data Visualization course, showcasing a range of analytical and visual storytelling techniques. Each project folder contains the source code (R Markdown / Quarto), data files, and output visualizations.
 
 ---
 
@@ -43,8 +45,3 @@ Performed text mining and co-authorship network analysis on ~10,000 arXiv papers
 **Tools:** R · tidytext · igraph · visNetwork · wordcloud · ggplot2
 
 ---
-
-## About
-
-These projects were completed as part of a Data Visualization course, showcasing a range of analytical and visual storytelling techniques. Each project folder contains the source code (R Markdown / Quarto), data files, and output visualizations.
-
