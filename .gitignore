@@ -1,0 +1,14 @@
+# macOS
+.DS_Store
+
+# R session files
+.Rhistory
+.RData
+.Rproj.user
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# R Markdown cache
+*_cache/
+*_files/
