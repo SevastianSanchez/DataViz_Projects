@@ -44,4 +44,9 @@ Performed text mining and co-authorship network analysis on ~10,000 arXiv papers
 
 **Tools:** R · tidytext · igraph · visNetwork · wordcloud · ggplot2
 
+<p align="center">
+    <img src="Text+NetworkAnalysis_Arxiv_L3/figures/wordcloud_top_100.png" width="600" alt="Word cloud: word frequency text analysis">
+</p>
+
+
 ---
