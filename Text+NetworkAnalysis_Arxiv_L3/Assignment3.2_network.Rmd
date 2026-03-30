@@ -197,7 +197,7 @@ webshot2::webshot(
   vwidth  = 1600,
   vheight = 1200, 
   selector = ".vis-network", # cropping to only the network
-  zoom = 3 
+  zoom = 5 
 )
 ```
 In the network displayed, nodes represent authors and edges (connections) indicate co-authorship relationships. The size of nodes represent the number of papers published by each author, while node color reflects centrality measure of betweenness, with with darker blue highlighting more central or influential authors. The network exhibits a densely connected core with several prominent and well-connected authors labeled (top 25). They are surrounded by peripheral nodes and smaller, loosely connected clusters as we go further from the center. 
