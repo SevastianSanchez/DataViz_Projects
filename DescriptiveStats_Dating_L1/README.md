@@ -17,7 +17,7 @@ The analysis is framed as a data-driven memo for a feature article, producing po
 | **Interactivity** | Interactive line graph (ggplotly), interactive pie charts (Plotly), filterable data table (DT) |
 
 <p align="center">
-  <img src="images/clipboard-2348474118.png" width="500" alt="Dating Trends">
+  <img src="images/graph_7.png" width="700" alt="Pie chart: How married & divorced people have met their spouces">
 </p>
 
 ## Tools & Libraries
@@ -29,11 +29,12 @@ The analysis is framed as a data-driven memo for a feature article, producing po
 
 | File | Description |
 |---|---|
-| `Assignment1_dating.Rmd` | R Notebook with full analysis and visualizations |
+| `Deliverable_Assignment1_dating.Rmd` | R Notebook with full analysis and visualizations |
+| `assignment1_description_dating.Rmd` | Full Description of Assignment 1 Tasks 
 | `Assignment1_dating.nb.html` | Rendered HTML output (viewable in browser) |
 | `HCMST_couples.rds` | Survey dataset |
 | `HCMST_variable_descriptions.pdf` | Variable codebook for the survey data |
-| `images/` | Supporting images used in the notebook |
+| `images/` | visualizations and interactive plots and produced as .png and .html files|
 
 ## Data Source
 
