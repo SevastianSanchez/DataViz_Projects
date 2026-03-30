@@ -2,7 +2,7 @@
 
 ## About
 
-A collection of data visualization projects by **Sevastian Sanchez**, demonstrating skills in exploratory data analysis, geospatial mapping, text mining, and network analysis — all built in R. These projects were completed as part of a Data Visualization course, showcasing a range of analytical and visual storytelling techniques. Each project folder contains the source code (R Markdown / Quarto), data files, and output visualizations.
+A collection of data visualization projects by **Sevastian Sanchez**, demonstrating skills in exploratory data analysis, geospatial mapping, text mining, and network analysis — all built in R. These projects were completed as part of the QMSS Data Visualization course, teaching a range of analytical and visual storytelling techniques. Each project folder contains the source code (R Markdown / Quarto), data files, and output visualizations.
 
 ---
 
@@ -17,7 +17,7 @@ Analyzed the *How Couples Meet and Stay Together* (HCMST) survey from Stanford U
 **Tools:** R · ggplot2 · dplyr · plotly · DT · patchwork
 
 <p align="center">
-  <img src="DescriptiveStats_Dating_L1/images/clipboard-2348474118.png" width="500" alt="Dating Trends Preview">
+    <img src="images/graph_2.png" width="700" alt="Bar graph: Dating Trends Over Time">
 </p>
 
 ---
