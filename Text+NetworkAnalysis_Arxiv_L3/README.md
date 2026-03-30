@@ -28,6 +28,7 @@ This project performs text mining and network analysis on approximately 10,000 a
 |---|---|
 | `Assignment3.1_TextAnalysis.Rmd` | R Markdown with text analysis (term frequency, word cloud) |
 | `Assignment3.2_network.Rmd` | R Markdown with co-authorship network construction and visualization |
+| `figures`| Contains all visualizations produced for this project |
 | `data/arxiv_subset.csv` | Dataset of ~10,000 arXiv paper records |
 | `data/arxiv_subset.json` | Full JSON metadata including parsed author names |
 
