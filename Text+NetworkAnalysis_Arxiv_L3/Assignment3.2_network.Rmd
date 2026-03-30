@@ -9,34 +9,23 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-# Text and Network Visualization with ArXiv Papers
+# Text and Network Visualization with ArXiv Papers (Part 2)
 
-## Data
+## Author Network Analysis (2)
+```{r}
+# setup 
+rm(list = ls())
 
-ArXiv is a free distribution service and open-access archive for scholarly articles, primarily in physics, mathematics, computer science, and related disciplines. For this assignment, we'll be working with a dataset of recent papers from the "Physics and Society" (physics.soc-ph) category, which covers research on social phenomena, collective behavior, opinion dynamics, social networks, and other topics at the intersection of physics and social science.
+# libraries
+library(tidyverse) 
+library(igraph)
+library(visNetwork)
 
-The dataset contains information about approximately 10,000 recent papers published between 2018 and the present. This subset has been extracted from the complete ArXiv dataset.
+# loading data
+arxiv <- read_csv("data/arxiv_subset.csv")
+```
 
-### `arxiv_subset.csv`
-
-| variable    | class     | description                                                 |
-| :---------- | :-------- | :---------------------------------------------------------- |
-| id          | character | ArXiv paper ID                                              |
-| title       | character | Paper title                                                 |
-| authors     | character | Author names (comma-separated list)                         |
-| categories  | character | ArXiv categories (papers can belong to multiple categories) |
-| update_date | character | Last update date                                            |
-| abstract    | character | Full text abstract of the paper                             |
-
-Additional information is available in the full JSON file (`arxiv_subset.json`) including version history, DOI, and other metadata. The JSON file also contains the parsed author names, making it easier to work with author data.
-
-## Tasks
-
-In this assignment, you will create a series of visualizations to explore the ArXiv papers dataset through text and network analysis techniques. Your notebook should be well-documented with explanations of your approach and interpretation of results. **Choose two of the three main tasks below to complete** (Text Analysis, Author Network, or Topic Analysis).
-
-## Author Network 
-
-a) **Network Construction**
+### a) **Wrangling & Network Construction**
 
 - **Filter the dataset** to include only papers that are categorized as both "physics.soc-ph" (Physics and Society) AND "cs.SI" (Social and Information Networks)
 - Extract author information from these papers and create a network where authors who co-authored at least one paper are connected
@@ -44,17 +33,6 @@ a) **Network Construction**
 - **Further limit your analysis to authors who have published at least 4 papers** in this subset to keep the visualization manageable
   - _Hint: Count papers per author, then filter to keep only prolific authors._
 
-```{r}
-library(tidyverse) 
-library(igraph)
-library(visNetwork)
-
-setwd("~/Desktop/Spring 2025/Data Viz/R Directory - Data_Viz/Sanchez_Sevastian_DataViz/11_arxiv_GRADED")
-arxiv <- read_csv("data/arxiv_subset.csv")
-```
-
-
-### Wrangling & constructing network 
 ```{r}
 #wrangling 
 filtered <- arxiv %>%
@@ -154,7 +132,7 @@ if (any(is.na(V(g)$papers))) {
 
 ```
 
-b) **Network Visualization**
+### b) **Preparing Network for Visualization**
 
 - Create a visualization of the author collaboration network using an appropriate layout algorithm
 - Size nodes based on the number of papers published by each author
@@ -163,7 +141,6 @@ b) **Network Visualization**
   - _Hint: Use centrality metrics available in network analysis packages like `igraph`._
 - Label the 10-15 most prolific authors
 
-# preparing visualization
 ```{r}
 # Centrality Calculation 
 V(g)$betweenness <- betweenness(g, normalized = TRUE)
@@ -191,7 +168,7 @@ edges_df <- edges_weighted %>%
   select(from, to)
 ```
 
-#Visualizing network
+## Visualizing Network
 ```{r}
 # Interactive Network Visualization 
 author_net <- visNetwork(nodes_df, edges_df, height = "600px", width = "100%") %>%
@@ -206,6 +183,9 @@ author_net <- visNetwork(nodes_df, edges_df, height = "600px", width = "100%") %
     startStabilizing = "function() { this.moveTo({scale:0.15}); }")
 
 author_net
+
+# save 
+visSave(author_net, file = "figures/author_network.html")
 
 ```
 In the network displayed, nodes represent authors and edges (connections) indicate co-authorship relationships. The size of nodes represent the number of papers published by each author, while node color reflects centrality measure of betweenness, with with darker blue highlighting more central or influential authors. The network exhibits a densely connected core with several prominent and well-connected authors labeled (top 25). They are surrounded by peripheral nodes and smaller, loosely connected clusters as we go further from the center. 

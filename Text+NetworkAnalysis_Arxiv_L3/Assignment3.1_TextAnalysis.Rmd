@@ -9,8 +9,35 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## packages and data 
+# Text and Network Visualization with ArXiv Papers (Part 1)
+
+**Data**
+ArXiv is a free distribution service and open-access archive for scholarly articles, primarily in physics, mathematics, computer science, and related disciplines. For this assignment, we'll be working with a dataset of recent papers from the "Physics and Society" (physics.soc-ph) category, which covers research on social phenomena, collective behavior, opinion dynamics, social networks, and other topics at the intersection of physics and social science.
+
+The dataset contains information about approximately 10,000 recent papers published between 2018 and the present. This subset has been extracted from the complete ArXiv dataset.
+
+**Variable descriptions:** `arxiv_subset.csv`
+
+| variable    | class     | description                                                 |
+| :---------- | :-------- | :---------------------------------------------------------- |
+| id          | character | ArXiv paper ID                                              |
+| title       | character | Paper title                                                 |
+| authors     | character | Author names (comma-separated list)                         |
+| categories  | character | ArXiv categories (papers can belong to multiple categories) |
+| update_date | character | Last update date                                            |
+| abstract    | character | Full text abstract of the paper                             |
+
+Additional information is available in the full JSON file (`arxiv_subset.json`) including version history, DOI, and other metadata. The JSON file also contains the parsed author names, making it easier to work with author data.
+
+**Tasks**
+In this assignment, you will create a series of visualizations to explore the ArXiv papers dataset through text and network analysis techniques. Your notebook should be well-documented with explanations of your approach and interpretation of results. *Choose two of the three main tasks below to complete* (***Text Analysis, Author Network***, or Topic Analysis).
+
+## Term Frequency Analysis (1)
 ```{r}
+#setup 
+rm(list = ls())
+
+# libraries
 library(tidyverse)
 library(tidytext)
 library(lubridate)
@@ -18,11 +45,11 @@ library(wordcloud)
 library(textstem)
 #library(SnowballC)
 
-setwd("~/Desktop/Spring 2025/Data Viz/R Directory - Data_Viz/Sanchez_Sevastian_DataViz/11_arxiv_GRADED")
+# loading data
 arxiv <- read_csv("data/arxiv_subset.csv")
 ```
 
-a) **Term Frequency Analysis**
+## Part 1a: Term Frequency, setup 
 - Prepare the paper abstracts by removing stopwords, punctuation, and numbers
 - _Hint: In R, the `tidytext` package provides functions like `unnest_tokens()` to tokenize text; in Python, use `nltk` or `spaCy` for tokenization and stopword removal._
 - Create a bar chart showing the top 20 most frequent terms across all abstracts
@@ -30,7 +57,6 @@ a) **Term Frequency Analysis**
 - Generate a comparative visualization (e.g., small multiples or grouped bars) showing how the top 10 terms differ between the years 2019 and 2023
 - _Hint: Use `update_date` as the source of the paper year._
 
-## Part 1a: Term Frequency, setup 
 ```{r}
 # Tokenizing and cleaning abstracts
 abstract_words <- arxiv %>%
@@ -55,6 +81,9 @@ ggplot(top_terms_all, aes(x = reorder(word, n), y = n, fill = n)) + #descending 
        title = 'Top 20 Most Frequent Words', 
        subtitle = 'Analyzing Abstracts from ArXiv Journal Publications (2018-2023)') +
   theme_minimal() + theme(legend.position="none")
+
+# save
+ggsave("figures/term_freq_all_years.png", width = 8, height = 6)
 ```
 
 Note: I initially applied the Snowball package in an attempt to handle words that contain the same root but different ending (e.g., network and networks). The output of stemming, which is the process of truncating words to roots, resulted in an output of non-real words (propos, measur, etc.). I then tried lemmatization using the textstem package, designed to convert words to their dictionary stem-word (lemma) using linguistic rules (which I will not talk about). Inputting this into my pipeline (seen above) resolved the issue because there are no longer multiple variations of the same word or stems of words (which aren't words). 
@@ -92,9 +121,10 @@ ggplot(comparison_data, aes(x = reorder(word, n), y = n, fill = factor(year))) +
        subtitle = 'Analyzing Abstracts from ArXiv Journal Publications') +
   theme_minimal()
 
+#save 
+ggsave("figures/term_freq_2019_2023.png", width = 8, height = 6)
 ```
-This analysis, clearly shows a significant shift in the popularity of words used in abstracts between the years 2019 and 2023. When we aggregate and count the frequency of words across all abstracts, regardless of year, and then identify the top 10 words, we notice great variation. Based on word frequency across allyears, we found that 2023 contained more of the most frequently used words across abstracts compared to 2019. This suggests that 2023 articles contain more words that are more commonly used in journal articles within the years 2018-2023 compared to those of 2019. Visially, it seems there is around a 0.5 (0.4-0.6) difference in word use across the top 10 words.  
-
+This analysis, clearly shows a significant shift in the popularity of words used in abstracts between the years 2019 and 2023. When we aggregate and count the frequency of words across all abstracts, regardless of year, and then identify the top 10 words, we notice great variation. Based on word frequency across allyears, we found that 2023 contained more of the most frequently used words across abstracts compared to 2019. This suggests that 2023 articles contain more words that are more commonly used in journal articles within the years 2018-2023 compared to those of 2019. Visually, it seems there is around a 0.5 (0.4-0.6) difference in word use across the top 10 words. 
 
 b) **Word Cloud**
 - Option 1: Generate a word cloud of the 100 most frequent meaningful terms in the abstracts, with proper color encoding and layout.
@@ -102,13 +132,19 @@ b) **Word Cloud**
 
 ## 1b: Word Cloud
 ```{r}
+# for reproducibility
+set.seed(128)
+
 #setting up
 top_100 <- abstract_words %>%
   count(word, sort = TRUE) %>%
   slice_max(n, n = 100)
 
-#plotting
+#plotting & saving
+png("figures/wordcloud_top_100.png", width = 600, height = 400)
 wordcloud(top_100$word, top_100$n,
-          scale = c(3, 0.5), colors = viridis::viridis(100))
+          scale = c(5, 0.5), colors = viridis::viridis(100))
+
+dev.off()
 ```
 Based on the word cloud, we also notice that the words 'network' and 'model' are highly distinquishable compared to all other top 100 words. Interestingly, we this reflected in both bar graphs, showing a large difference in the rate of frequency between the words 'network' and 'model' and all other words. 
