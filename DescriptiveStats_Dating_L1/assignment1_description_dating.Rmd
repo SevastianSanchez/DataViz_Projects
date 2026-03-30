@@ -1,0 +1,93 @@
+---
+title: "Assignment 1 - Dating"
+output: html_notebook
+date: 2025-02-12
+author: Thomas Brambor
+editor_options: 
+  chunk_output_type: inline
+---
+
+![](images/clipboard-2348474118.png)
+
+## Scenario
+
+Imagine you are a data scientist at a respected media outlet -- say the "New York Times". Your editor wants to support the writing of a feature article about *How Couples Meet and Stay Together*. Your editor-in-chief asks you to analyze some data from an [extensive survey conducted by a researcher at Stanford University](https://data.stanford.edu/hcmst).
+
+Since there is **no way that all features of the data can be represented** in such a memo, feel free to pick and choose some patterns that would make for a good story -- outlining important patterns and presenting them in a visually pleasing way.
+
+The full background and text of the story will be researched by a writer of the magazine -- your input should be based on the data and some common sense (i.e. no need to read up on this). It does help, however, to briefly describe what you are presenting and what it highlights.
+
+Provide **polished plots** that are refined enough to include in the magazine with very little further manipulation (already include variable descriptions [if necessary for understanding], titles, source [e.g. "How Couples Meet and Stay Together (Rosenfeld, Reuben, Falcon 2018)"], appropriate colors, fonts etc.) and are understandable to the average reader of the "New York Times". The design does not need to be NYTimes-like. Just be consistent.
+
+## Data
+
+We will be using the 2017 wave of the HCMST survey - provided as `HCMST_couples.rds`. The file `HCMST_variable_descriptions.pdf` contains most of the variable descriptions and coding of responses.
+
+## Tasks
+
+### 1. Dating Trends Over Time
+
+a) Visualize how the mode of meeting for the first time has changed over the years. Create two (2) charts in this section to highlight some important pattern(s).
+
+b) Create an alternative visualization of the same data. Discuss which visualization you recommend to the editor and why. Rely on at least three specific data visualization principles or theories discussed in class to justify your choice.
+
+_Hint_:  
+- The variables `Q21A_Year` and `Q21A_Month` contain the year and month when the respondent first met their partner.  
+- `meeting_type` contains 21 categories of how people have met for the first time. Simplify into fewer categories, for example: grade school, college, neighbors, bar, work, non-work, online.  
+- calculate the frequency of meeting type over time for visualization  
+
+### 2. Age is Just a Number
+
+a) Create one (1) visualization to show the relationship between a respondent's age and their partner's age, accounting for the gender of the respondent? Identify the main pattern in the graph via an annotation directly added to the plot.
+
+_Hint_: `ppage` is the survey respondent's age, `Q9` captures the partner's age, `ppgender` is the gender of the respondent. 
+
+b) Use Edward Tufte's principles to critique the plot above. Which of the changes would improve the plot in your opinion?
+
+### 3. Politics and Dating
+
+a) Explore how the political affiliation of partners affects how couples meet and stay together. Create two (2) charts in this section. Make sure to use some variation in the type of visualizations. Discuss which visualization you recommend to your editor and why.
+
+b) Write a short narrative (~150 words) based on your visualization, integrating data insights with a compelling story. This narrative should be suitable for a feature article, highlighting key findings and their implications.
+
+_Hint_:   
+- The variable `partyid7` contains the self reported political party affiliation of the survey respondent. The variable `w6_q12` contains information about the partner's political party affiliation.  
+- Consider using information about the length of the relationship (duration in days), information about ended relationship etc.  
+
+### 4. Your Turn to Choose
+
+There are lots of other variables that could make for an interesting story, for example, educational background differences, relationship stages (First Met, Romantic, Live together & Married), regional patterns, relationship break ups, sexual behavior etc. Select some variables of your choice to tell a story that captures an interesting insight into the data.
+
+Create one (1) chart in this section to highlight some important patterns. Briefly discuss which visualization you recommend to your editor, why you think the visualization is useful, and which patterns it serves to highlight.
+
+## Interactivity
+
+### 5. Make Two Plots Interactive
+
+a) Choose 2 of the plots you created above and add interactivity. For at least one of these interactive plots, this should not be done through the use of `ggplotly` 
+
+b) Briefly describe to the editor why interactivity in these visualizations is particularly helpful for a reader, referencing user engagement theories or interaction design principles.
+
+### 6. Data Table
+
+To allow the reader to explore the survey data by themselves a bit, select a few useful variables, rename them appropriately for the table to be self-explanatory, and add an interactive data table to the output. Make sure the columns are clearly labeled. Select the appropriate options for the data table (e.g. search bar, sorting, column filters, in-line visualizations etc. -- as far as the tools supplied in lecture allow).
+
+## Technical Details
+
+The data comes in a reasonably clean file. However, if you do find issues with the data, recode any values, etc. please make this clear in the code (and if significant add into the description).
+
+If needed for your visualization, you can add visual drapery like icons, images etc. but you are certainly not obligated to do that. What is important, however, to *use a consistent style across all your visualizations*.
+
+Part of the task will be transforming the dataset into a shape that allows you to plot what you want. For some plots, you will necessarily need to be selective in what to include and what to leave out.
+
+Make sure to use *at least* three different types of graphs, e.g. line graphs, scatter, histograms, bar charts, dot plots, heat maps, etc.
+
+## Submission
+
+Please follow the [instructions](/Exercises/homework_submission_instructions.md) to submit your homework. The homework is due on Friday, February 21 at 5pm.
+
+## Please Stay Honest!
+
+Yes, this type of data has been analyzed before. If you do come across something, please no wholesale copying of other ideas. We are trying to evaluate your abilities in using the packages we discussed to create data visualization not the ability to do internet searches. Similarly, please stay away from solutions / code created by generative AI. Here is your chance to learn and apply the concepts we have discussed in class!  
+
+Also, this is an individually assigned exercise -- please keep your solution to yourself!

@@ -9,21 +9,18 @@ editor_options:
 
 ![](images/clipboard-2348474118.png)
 
-## Scenario
+## Scenario/Case
 
 Imagine you are a data scientist at a respected media outlet -- say the "New York Times". Your editor wants to support the writing of a feature article about *How Couples Meet and Stay Together*. Your editor-in-chief asks you to analyze some data from an [extensive survey conducted by a researcher at Stanford University](https://data.stanford.edu/hcmst).
 
-Since there is **no way that all features of the data can be represented** in such a memo, feel free to pick and choose some patterns that would make for a good story -- outlining important patterns and presenting them in a visually pleasing way.
+The full background and text of the story will be researched by a writer of the magazine. You will be using the 2017 wave of the HCMST survey - provided as `HCMST_couples.rds`. The file `HCMST_variable_descriptions.pdf` contains most of the variable descriptions and coding of responses.
 
-The full background and text of the story will be researched by a writer of the magazine -- your input should be based on the data and some common sense (i.e. no need to read up on this). It does help, however, to briefly describe what you are presenting and what it highlights.
-
-Provide **polished plots** that are refined enough to include in the magazine with very little further manipulation (already include variable descriptions [if necessary for understanding], titles, source [e.g. "How Couples Meet and Stay Together (Rosenfeld, Reuben, Falcon 2018)"], appropriate colors, fonts etc.) and are understandable to the average reader of the "New York Times". The design does not need to be NYTimes-like. Just be consistent.
-
-## Data
-
-We will be using the 2017 wave of the HCMST survey - provided as `HCMST_couples.rds`. The file `HCMST_variable_descriptions.pdf` contains most of the variable descriptions and coding of responses.
+## Loading Data & Libraries
 
 ```{r}
+rm(list = ls())
+
+# libraries
 library(dplyr)
 library(tidyverse)
 library(ggthemes)
@@ -33,12 +30,11 @@ library(forcats)
 library(plotly)
 library(DT)
 
-
-setwd("~/Desktop/Spring 2025/Data Viz/R Directory - Data_Viz/Sanchez_Sevastian_DataViz/07_parking_GRADED")
+# load data
 filename <- file.choose()
 couples <- readRDS(filename)
 
-# extracting vars and creating df
+# extracting vars renaming and and creating df
 df <- data.frame(ID = couples$CaseID, 
                  couples$DOV_Branch, 
                  ship_status = couples$partnership_status, 
@@ -60,11 +56,9 @@ df <- data.frame(ID = couples$CaseID,
                  )
 ```
 
-## Tasks
-
 ### 1. Dating Trends Over Time
 
-a)  Visualize how the mode of meeting for the first time has changed over the years. Create two (2) charts in this section to highlight some important pattern(s).
+Visualizing how the way people meet for the first time has changed over the years. Starting by creating two (2) charts to highlight important pattern(s).
 
 **Wrangling and Cleaning**
 
@@ -117,8 +111,11 @@ base_graph <- ggplot(df, aes(x = fct_rev(fct_infreq(type_met)),
   labs(x=NULL, y= "Counts", title = "How did you meet your partner?", fill = "Meeting Type")+
   theme_minimal()
 
-base_graph + theme(legend.position = "none")
+base_graph <- base_graph + theme(legend.position = "none")
+base_graph
 
+#save
+ggsave(base_graph, filename = "images/base_graph.png", width = 6, height = 4, dpi = 300)
 ```
 
 **Chart 1: stacked bar (counts)**
@@ -143,6 +140,8 @@ graph_1 <- ggplot(df_filtered, aes(x = year_met, fill = type_met))+
   
 graph_1
 
+# save 
+ggsave(graph_1, filename = "images/graph_1.png", width = 6, height = 4, dpi = 300)
 ```
 
 **Graph 2: stacked bar (proportions)(grouped)**
@@ -160,9 +159,12 @@ graph_2 <- ggplot(df_filtered, aes(x=year_group, fill=type_met))+
   theme(axis.text.x = element_text(angle = 70, hjust = 1, vjust = 1.15, size=7))
 
 graph_2
+
+# save 
+ggsave(graph_2, filename = "images/graph_2.png", width = 6, height = 4, dpi = 300)
 ```
 
-b)  Create an alternative visualization of the same data. Discuss which visualization you recommend to the editor and why. Rely on at least three specific data visualization principles or theories discussed in class to justify your choice.
+Creating an alternative visualization of the same data to explore different patterns and to compare which one is more effective at conveying the story.
 
 **Chart 3: Line Graph (Alternative)**
 
@@ -191,13 +193,16 @@ graph_3 <- ggplot(line, aes(x = year_met, y = count, color = type_met, group = t
   theme(axis.text.x = element_text(angle = 75, hjust = 1, size = 7)) # Add lines for each meeting type
 
 graph_3
+
+# save 
+ggsave(graph_3, filename = "images/graph_3.png", width = 6, height = 4, dpi = 300)
 ```
 
 **My recommendation**: Chart 1 is nice for visualizing changes in the the frequency of modes every year, while drawing attention to the rise of some modes (i.e., internet). However, chart 1 might not be the best means of comparing proportional distribution. To combat this, chart 2 was created to explore the share (%), with years grouped into decades. While chart 2 does a better job than chart 1 at highlighting which modes are more popular than others over time, aggregating by decade results in measurement error which can mislead viewers -- a lot of changes can happen in 10 years. The last vizualization, chart 3, circumvents these issues. Not only does a frequency-based line graph allow viewers to clearly decipher which modes are above and below others in terms of popularity, but it also allows us to compare across all years. I would recommend chart 3.
 
 ### 2. Age is Just a Number
 
-a)  Create one (1) visualization to show the relationship between a respondent's age and their partner's age, accounting for the gender of the respondent? Identify the main pattern in the graph via an annotation directly added to the plot.
+Illustrating the relationship between a respondent's age and their partner's age, accounting for the gender of the respondent.
 
 **Chart 4: Scatterplot**
 
@@ -222,15 +227,16 @@ graph_4 <- ggplot(data = df, aes(x = resp_age, y = part_age, color = resp_gender
   theme_minimal()
 
 graph_4
+
+# save
+ggsave(graph_4, filename = "images/graph_4.png", width = 6, height = 4, dpi = 300)
 ```
 
-b)  Use Edward Tufte's principles to critique the plot above. Which of the changes would improve the plot in your opinion?
-
-**Answer**: If I were Tufte, I would say that the color, the grid lines, and the relatively large data points are unnecessary. Based on data-inc-ration alone, the graph is not at par with what Tuft would have visioned for a effective and compelling vizual aid. I think that the scatter plot would improve (from Tufte standards) from smaller lm lines, and smaller data points. Additionally, I would unbold the annotation/caption.
+**Critiquing based on Tufte principles**: The color, the grid lines, and the relatively large data points are unnecessary. Based on data-inc-ration alone, the graph is not at par with what Tuft would have visioned for a effective and compelling visual aid. I think that the scatter plot would improve (from Tufte standards) from smaller lm lines, and smaller data points. Additionally, I would unbold the annotation/caption.
 
 ### 3. Politics and Dating
 
-a)  Explore how the political affiliation of partners affects how couples meet and stay together. Create two (2) charts in this section. Make sure to use some variation in the type of visualizations. Discuss which visualization you recommend to your editor and why.
+Exploring how the political affiliation of partners affects how couples meet and stay together.
 
 **Cleaning & Wrangling**
 
@@ -284,6 +290,9 @@ graph_5 <- ggplot(party_pair_filtered, aes(x = party_pair, fill = type_met)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 graph_5
+
+# save
+ggsave(graph_5, filename = "images/graph_5.png", width = 6, height = 4, dpi = 300)
 ```
 
 ```{r}
@@ -306,27 +315,23 @@ graph_6 <- ggplot(party_pair_filtered, aes(x = party_pair, y = duration, fill = 
     title = "Relationship Duration by Political Alignment",
     x = NULL,
     y = "Duration of Relationship (Years)",
-    fill = NULL
-  )+ 
-  theme_minimal()+ theme(legend.position="none")
+    fill = NULL)+ 
+  theme_minimal()+ 
+  theme(legend.position="none")
 
 graph_6
 
+# save
+ggsave(graph_6, filename = "images/graph_6.png", width = 6, height = 4, dpi = 300)
+
 ```
 
-**Discussion**:
-
-b)  Write a short narrative (\~150 words) based on your visualization, integrating data insights with a compelling story. This narrative should be suitable for a feature article, highlighting key findings and their implications.
-
-**Narrative**: The way couples meet and the longevity of their relationships seem closely tied to political alignment. Social settings dominate as the most popular meeting type for politically aligned couples, such as "Dem-Dem" and "Rep-Rep," while mixed-affiliation couples like "Dem-Ind" show a more diverse distribution of meeting types, including online platforms and work-related activities. This suggests that shared political beliefs may streamline social circles, making it easier for like-minded individuals to connect.
+**Narrative (Discussion)**: The way couples meet and the longevity of their relationships seem closely tied to political alignment. Social settings dominate as the most popular meeting type for politically aligned couples, such as "Dem-Dem" and "Rep-Rep," while mixed-affiliation couples like "Dem-Ind" show a more diverse distribution of meeting types, including online platforms and work-related activities. This suggests that shared political beliefs may streamline social circles, making it easier for like-minded individuals to connect.
 
 When it comes to relationship duration, couples with the same political affiliation, particularly "Dem-Dem" and "Rep-Rep," tend to have longer-lasting relationships compared to mixed-affiliation pairs. This pattern hints at the stabilizing influence of shared values and worldviews on partnerships. These findings highlight how political identity extends beyond ideology, influencing both how couples form and how they endure over time.
 
-### 4. Your Turn to Choose
-
-There are lots of other variables that could make for an interesting story, for example, educational background differences, relationship stages (First Met, Romantic, Live together & Married), regional patterns, relationship break ups, sexual behavior etc. Select some variables of your choice to tell a story that captures an interesting insight into the data.
-
-Create one (1) chart in this section to highlight some important patterns. Briefly discuss which visualization you recommend to your editor, why you think the visualization is useful, and which patterns it serves to highlight.
+### 4. Meeting Types and Relationship Outcomes
+Exploring the relationship between meeting types and relationship outcomes (e.g. marriage, divorce, separation, breakup) can provide insights into how the context of meeting may influence the trajectory of relationships. I create two (2) pie charts to compare the distribution of meeting types between married and divorced/separated respondents. 
 
 ```{r}
 # probability of marriage across meeting types 
@@ -381,18 +386,22 @@ graph7.2 <-ggplot(pie_nonmar_df, aes(x = "", y = count, fill = type_met)) +
     legend.position = "none"
   )
 
+# combining
 graph_7_comb <- graph7.1 + graph7.2
 graph_7 <- graph_7_comb + theme(legend.position="right")
 graph_7
+
+# save
+ggsave(graph_7, filename = "images/graph_7.png", width = 8, height = 4, dpi = 300)
 ```
 
 **Discussion**: The dual pie chart effectively compares how meeting types differ between married and divorced/separated respondents. It highlights that social settings are prominent for both groups, while work-related activities are more common among married couples. The use of percentages within each slice (observing the two interactive plots) would make the comparison even clearer, allowing readers to easily grasp the relative importance of each meeting type.
 
 ## Interactivity
 
-### 5. Make Two Plots Interactive
+### 5. Applying Interactivity to Pie Charts and Temporal Trends
 
-a)  Choose 2 of the plots you created above and add interactivity. For at least one of these interactive plots, this should not be done through the use of `ggplotly`
+Testing manual and package-wise (`ggplotly`) implementation of interactivity.
 
 **Interactive Plot 1: plotly piechart version**
 ```{r}
@@ -429,24 +438,27 @@ interactive_pie_divsep <- plot_ly(
     legend = list(orientation = "h") # Horizontal legend
   )
 interactive_pie_divsep
-```
 
-
-```{r}
-# Interactive Plot 2:
-ggplotly(graph_3)
-
+# save as html
+htmlwidgets::saveWidget(interactive_pie_mar, "images/interactive_pie_mar.html")
+htmlwidgets::saveWidget(interactive_pie_divsep, "images/interactive_pie_divsep.html")
 ```
 
 **Interactive Plot 2:**
+```{r}
+# Interactive Plot 2:
+interactive_graph_3 <- ggplotly(graph_3)
 
-b)  Briefly describe to the editor why interactivity in these visualizations is particularly helpful for a reader, referencing user engagement theories or interaction design principles.
+# save as html
+htmlwidgets::saveWidget(interactive_graph_3, "images/interactive_graph_3.html")
 
-**Describe**: Interactivity in these visualizations allows readers to explore the data in a more engaging and intuitive way. For example, hovering over the pie chart slices reveals exact percentages and meeting types, making it easier to compare how married and divorced/separated couples met. Similarly, the line graph enables readers to focus on specific trends, such as the sharp rise of online meeting platforms after 2000. These features make the data more accessible and encourage readers to uncover insights on their own.
+```
+
+**Significance of Interactivity**: Interactivity in these visualizations allows readers to explore the data in a more engaging and intuitive way. For example, hovering over the pie chart slices reveals exact percentages and meeting types, making it easier to compare how married and divorced/separated couples met. Similarly, the line graph enables readers to focus on specific trends, such as the sharp rise of online meeting platforms after 2000. These features make the data more accessible and encourage readers to uncover insights on their own.
 
 ### 6. Data Table
 
-To allow the reader to explore the survey data by themselves a bit, select a few useful variables, rename them appropriately for the table to be self-explanatory, and add an interactive data table to the output. Make sure the columns are clearly labeled. Select the appropriate options for the data table (e.g. search bar, sorting, column filters, in-line visualizations etc. -- as far as the tools supplied in lecture allow).
+Developing DT explorer to allow readers to better engage with the survey data on their own. 
 
 ```{r}
 # Interactive table:
@@ -485,24 +497,8 @@ datatable(
   caption = "Explore Meeting Types and Relationship Details of Survey Respondents"
 )
 
+# save as html
+htmlwidgets::saveWidget(datatable(interactive_tab), "images/interactive_table.html")
 ```
 
-## Technical Details
 
-The data comes in a reasonably clean file. However, if you do find issues with the data, recode any values, etc. please make this clear in the code (and if significant add into the description).
-
-If needed for your visualization, you can add visual drapery like icons, images etc. but you are certainly not obligated to do that. What is important, however, to *use a consistent style across all your visualizations*.
-
-Part of the task will be transforming the dataset into a shape that allows you to plot what you want. For some plots, you will necessarily need to be selective in what to include and what to leave out.
-
-Make sure to use *at least* three different types of graphs, e.g. line graphs, scatter, histograms, bar charts, dot plots, heat maps, etc.
-
-## Submission
-
-Please follow the [instructions](/Exercises/homework_submission_instructions.md) to submit your homework. The homework is due on Friday, February 21 at 5pm.
-
-## Please Stay Honest!
-
-Yes, this type of data has been analyzed before. If you do come across something, please no wholesale copying of other ideas. We are trying to evaluate your abilities in using the packages we discussed to create data visualization not the ability to do internet searches. Similarly, please stay away from solutions / code created by generative AI. Here is your chance to learn and apply the concepts we have discussed in class!
-
-Also, this is an individually assigned exercise -- please keep your solution to yourself!
