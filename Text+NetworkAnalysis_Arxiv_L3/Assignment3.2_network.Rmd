@@ -20,6 +20,7 @@ rm(list = ls())
 library(tidyverse) 
 library(igraph)
 library(visNetwork)
+library(webshot2)
 
 # loading data
 arxiv <- read_csv("data/arxiv_subset.csv")
@@ -170,8 +171,11 @@ edges_df <- edges_weighted %>%
 
 ## Visualizing Network
 ```{r}
+# for reproducibility
+set.seed(324)
+
 # Interactive Network Visualization 
-author_net <- visNetwork(nodes_df, edges_df, height = "600px", width = "100%") %>%
+author_net <- visNetwork(nodes_df, edges_df, height = "1200px", width = "1600px") %>%
   visIgraphLayout(layout = "layout_nicely") %>%
   visNodes(size = nodes_df$value, font = list(size = 45, color = "#444444", face = "georgia", bold = TRUE)) %>%
   visEdges(smooth = FALSE) %>%
@@ -181,12 +185,20 @@ author_net <- visNetwork(nodes_df, edges_df, height = "600px", width = "100%") %
   visEvents(
     type = "once",
     startStabilizing = "function() { this.moveTo({scale:0.15}); }")
-
 author_net
 
 # save 
 visSave(author_net, file = "figures/author_network.html")
 
+# screenshot for static image
+webshot2::webshot(
+  url   = "figures/author_network.html",
+  file  = "figures/author_network_static.png",
+  vwidth  = 1600,
+  vheight = 1200, 
+  selector = ".vis-network", # cropping to only the network
+  zoom = 3 
+)
 ```
 In the network displayed, nodes represent authors and edges (connections) indicate co-authorship relationships. The size of nodes represent the number of papers published by each author, while node color reflects centrality measure of betweenness, with with darker blue highlighting more central or influential authors. The network exhibits a densely connected core with several prominent and well-connected authors labeled (top 25). They are surrounded by peripheral nodes and smaller, loosely connected clusters as we go further from the center. 
 
