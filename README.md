@@ -17,7 +17,7 @@ Analyzed the *How Couples Meet and Stay Together* (HCMST) survey from Stanford U
 **Tools:** R · ggplot2 · dplyr · plotly · DT · patchwork
 
 <p align="center">
-    <img src="images/graph_2.png" width="700" alt="Bar graph: Dating Trends Over Time">
+    <img src="DescriptiveStats_Dating_L1/images/graph_2.png" width="600" alt="Bar graph: Dating Trends Over Time">
 </p>
 
 ---
