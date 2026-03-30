@@ -16,6 +16,10 @@ This project performs text mining and network analysis on approximately 10,000 a
 | **Word cloud** | Top 100 terms with viridis color encoding |
 | **Co-authorship network** | Interactive network graph (visNetwork) with centrality coloring and node sizing |
 
+<p align="center">
+    <img src="figures/wordcloud_top_100.png" width="600" alt="Word cloud: word frequency text analysis">
+</p>
+
 ## Tools & Libraries
 
 - **R** — tidyverse, ggplot2, lubridate
