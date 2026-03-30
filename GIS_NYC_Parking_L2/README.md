@@ -15,7 +15,7 @@ This project explores parking violation data from NYC Open Data, focusing on ove
 | **Luxury vs. non-luxury cars** | Color-coded circle markers with legend |
 
 <p align="center">
-  <img src="Output/all_3_maps.png" width="600" alt="Manhattan Precinct Maps">
+  <img src="Output/Rplot.png" width="600" alt="Manhattan Precinct Maps">
 </p>
 
 <p align="center">
